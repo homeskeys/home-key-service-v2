@@ -48,6 +48,8 @@ export default class UploadImgController {
         motelRoom: motelRoomModel,
         image: imageModel,
       } = global.mongoModel;
+      
+      console.log("TẢI ẢNH LÊN")
 
       let { id: motelRoomId } = req.params;
 
@@ -65,8 +67,11 @@ export default class UploadImgController {
 
       const { body: data } = req;
 
+      console.log("ảnhhh", data);
+
       // Upload image
       if (req["files"]) {
+        console.log("CÓ ẢNH")
         data.images = {};
         const uploadResults = await imageService.upload(req["files"].file);
         if (uploadResults.error) {
