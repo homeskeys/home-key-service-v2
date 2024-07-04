@@ -1795,29 +1795,33 @@ export default class TransactionsController {
 
           const jobData = await JobController.getJobNoImg(orderData.job);
 
-          // await NotificationController.createNotification({
-          //   title: "Thông báo đóng tiền phòng",
-          //   content: "Vui lòng thanh toán tiền phòng trong vòng 5 ngày.",
-          //   user: jobData.user,
-          // });
+          const checkInTime = moment(jobData.checkInTime);
+          // const checkInTimePlusOneMonth = checkInTime.add(1, "months");
+          // const rentalPeriod = jobData.rentalPeriod;
+          // const checkOutDay = checkInTime.add(rentalPeriod, "months").subtract(1, "days");
 
-
-          // SỬA: chỗ này cần tạo 1 job để tạo bill tháng đó vào cuối tháng, để có thể bao gồm tiền phòng
-          await global.agendaInstance.agenda.schedule(
-            moment()
-              .startOf("month")
-              .add("1", "months")
-              .toDate(),
-            "CreateFirstMonthOrder",
-            { jobId: jobData._id }
-          );
-
-          // await global.agendaInstance.agenda.schedule(
-          //   moment().add("2", 'minutes').toDate(),
-          //   'CreateFirstMonthOrder',
-          //   { jobId: jobData._id }
-          // );
-
+          console.log("CHECK INNNN", checkInTime.endOf("months"));
+          console.log("CHECK OUTTTT", moment().endOf("months"));
+          // if(checkInTimePlusOneMonth.startOf("months").isBefore(moment())) {
+          if(checkInTime.endOf("months").isSame(moment().endOf("months"))) {
+            await global.agendaInstance.agenda.schedule(
+              moment()
+                .startOf("month")
+                .add("1", "months")
+                .toDate(),
+              "CreateFirstMonthOrder",
+              { jobId: jobData._id }
+            );
+          } else {
+            await global.agendaInstance.agenda.schedule(
+              moment()
+                .add(5, "minutes")
+                .toDate(),
+              "CreateFirstMonthOrder",
+              { jobId: jobData._id }
+            );
+          }
+  
 
           // const newOrderData = await orderModel.create({
           //   user: jobData.user,
@@ -1883,7 +1887,11 @@ export default class TransactionsController {
         // nếu cọc thì xóa job, xóa order
         if (resDataS.type === "deposit") {
           //note: tạm thời xóa đi job
-          await jobModel.remove({ _id: orderData.job }).lean().exec();
+          // await jobModel.remove({ _id: orderData.job }).lean().exec();
+          await jobModel.findOneAndUpdate(
+            { _id: orderData.job },
+            { isDeleted: true },
+          ).lean().exec();
 
           //xóa job ra khỏi user
 

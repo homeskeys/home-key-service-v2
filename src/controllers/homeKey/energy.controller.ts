@@ -5477,10 +5477,14 @@ export default class EnergyController {
   ): Promise<any> {
     try {
 
+      // calculateElectricUsedDayToDayHaveLabelTime("")
+
       // const a = await helpers.getImageUrl("666012d86a765add7c01ad0e");
       // const a  = moment().startOf("months");
       // const b = moment().month();
-      // const c = moment("2024-05-31T17:00:00.000+00:00")
+      const c = moment("2024-05-31T17:00:00.000+00:00");
+      const d = moment(c).date(11);
+      console.log({d});
       // console.log({b});
       // console.log(typeof(b));
       // console.log({c})

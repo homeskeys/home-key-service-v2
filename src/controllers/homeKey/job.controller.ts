@@ -232,10 +232,8 @@ export default class JobController {
           }`,
         amount: data.deposit,
         type: "deposit",
-        expireTime: moment(resData.checkInTime).endOf("day").toDate(),
+        expireTime: moment(resData.checkInTime).add(7, "days").endOf("day").toDate(),
       });
-
-      console.log("expireeee time", moment(resData.checkInTime).endOf("day").toDate());
 
       resData = await jobModel.findOneAndUpdate(
         { _id: resData._id },
@@ -1103,6 +1101,8 @@ export default class JobController {
         motelRoom: motelRoomModel,
       } = global.mongoModel;
 
+      console.log("THÔNG TIN NGƯỜI DÙNG: ", req["userId"]);
+
       const imageService = new ImageService("local", true);
 
       // Process form data
@@ -1117,6 +1117,7 @@ export default class JobController {
 
       let resData = await JobController.getJob(req.params.id, {
         user: mongoose.Types.ObjectId(req["userId"]),
+        // user: mongoose.Types.ObjectId('6683b81ac475a72180ce590c'),
       });
 
       if (resData && resData.error) {
@@ -1154,11 +1155,11 @@ export default class JobController {
         .lean()
         .exec();
 
-      await NotificationController.createNotification({
-        title: "Thông báo đóng tiền phòng",
-        content: "Vui lòng thanh toán tiền trước cuối tháng.",
-        user: resData.user,
-      });
+      // await NotificationController.createNotification({
+      //   title: "Thông báo đóng tiền phòng",
+      //   content: "Vui lòng thanh toán tiền trước cuối tháng.",
+      //   user: resData.user,
+      // });
 
       const checkInTime = moment(resData.checkInTime)
         .utcOffset(420)
@@ -1171,7 +1172,8 @@ export default class JobController {
         description: `Tiền thanh toán khi nhận phòng tháng ${checkInTime.split("/")[0]}/${checkInTime.split("/")[2]}`,
         amount: resData.afterCheckInCost,
         type: "afterCheckInCost",
-        expireTime: moment(resData.checkInTime).add(7, "days").endOf("day").toDate(),
+        // expireTime: moment(resData.checkInTime).add(7, "days").endOf("day").toDate(),
+        expireTime: moment().add(7, "days").endOf("day").toDate(),
       });
 
       resData = await jobModel
@@ -1230,7 +1232,7 @@ export default class JobController {
         .exec();
 
       await global.agendaInstance.agenda.schedule(
-        moment(resData.checkInTime)
+        moment()
           .add(7, "days").endOf("day")
           .toDate(),
         "CheckOrderStatus",
