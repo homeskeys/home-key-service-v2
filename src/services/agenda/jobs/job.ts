@@ -109,7 +109,7 @@ export default (agenda) => {
         electricNumber = 0;
       } else {
         electricNumber = dataElectricAll.totalkWhTime;
-        labelTime = dataElectricAll.labelTimel;
+        labelTime = dataElectricAll.labelTime;
         kWhData = dataElectricAll.kWhData;
       }
 
@@ -237,14 +237,9 @@ export default (agenda) => {
             electricNumber = 0;
           } else {
             electricNumber = dataElectricAll.totalkWhTime;
-            labelTime = dataElectricAll.labelTimel;
+            labelTime = dataElectricAll.labelTime;
             kWhData = dataElectricAll.kWhData;
           }
-          console.log({electricNumber});
-
-          console.log({startTime});
-          console.log({endTime});
-          console.log({expireTime});
   
           const roomData = await roomModel.findOne({_id: roomId})
                                                                       .lean()
@@ -271,7 +266,7 @@ export default (agenda) => {
             servicePrice: servicePrice,
             vehiclePrice: vehiclePrice,
             roomPrice: roomPrice,
-            description: `Tiền phòng tháng ${moment(checkInTime).month() + 1}/${moment(checkInTime).year()}`, 
+            description: `Tiền phòng tháng ${moment(checkInTime).month() + 1}/${moment(checkInTime).year()}`,
             amount: amount,
             type: "monthly",
             startTime: startTime.toDate(),
@@ -296,7 +291,7 @@ export default (agenda) => {
           );
   
           await global.agendaInstance.agenda.schedule(
-            moment().add("5", 'hours').toDate(), //note: 5 minute
+            moment().add("2", "minutes").toDate(), //note: 5 minute
             "CheckOrderStatusTemp",
             { orderId: orderData._id }
           );
@@ -711,7 +706,7 @@ export default (agenda) => {
             );
 
           } else if (moment().month() === checkOutTime.month()) {
-            if (checkOutTime.date() <= 2) {
+            if (checkOutTime.date() <= 2) {              
               await global.agendaInstance.agenda.schedule(
                 moment().add("2", 'minutes').toDate(), //note: 5
                 "RemindUserMonthlyToExpirePlus2Day_Expire1Or2ThisMonth", 
@@ -783,6 +778,14 @@ export default (agenda) => {
         const rentalPeriod = jobData.rentalPeriod;
 
         const checkOutTime = moment(checkInTime).add(rentalPeriod, "months").subtract(1, "days"); // ngày cuối cùng được ở
+        const checkOutTimePlus3Days = checkOutTime.add(3, 'days').endOf('day'); // ngày cuối cùng được ở
+
+        if(!moment(orderData.expireTime).endOf('day').isSame(checkOutTimePlus3Days)) {
+          await orderModel.findOneAndUpdate(
+            {_id: orderData._id},
+            {expireTime: checkOutTimePlus3Days}
+          )
+        }
 
         if (orderData.isCompleted === false) {
 
@@ -790,7 +793,8 @@ export default (agenda) => {
                                                                   .lean()
                                                                   .exec();
 
-          if (moment().date() <= 3) {
+          // if (moment().date() <= 3) {
+          if (checkOutTimePlus3Days.diff(moment().endOf('day')) >= 0) {
             if (userData) {
               if (userData.email) {
                 const transporter = nodemailer.createTransport({
@@ -817,14 +821,22 @@ export default (agenda) => {
                     // console.log('Email đã được gửi: ' + info.response);
                   }
                 });
-  
-                // console.log(`Gửi tới mail: ${userData.email}`);
+              } else {
+                await global.agendaInstance.agenda.schedule(
+                  moment()
+                    .add(1, "days")
+                    .startOf('day')
+                    .toDate(),
+                  "RemindUserMonthlyToDay3_ExpireEndOfLastMonth",
+                  { orderId: job.attrs.data.orderId }
+                );
               }
             }
 
             await global.agendaInstance.agenda.schedule(
               moment()
                 .add(1, "days")
+                .startOf('day')
                 .toDate(),
               "RemindUserMonthlyToDay3_ExpireEndOfLastMonth",
               { orderId: job.attrs.data.orderId }
@@ -923,6 +935,35 @@ export default (agenda) => {
                 .findOneAndUpdate({ _id: userId }, userUpdateData, { new: true })
                 .exec();
 
+            }
+
+            if(userData) {
+              if (userData.email) {
+                const transporter = nodemailer.createTransport({
+                  service: 'gmail',
+                  auth: {
+                    user: 'cr7ronadol12345@gmail.com',
+                    pass: 'wley oiaw yhpl oupy'
+                  }
+                });
+  
+                const mailOptions = {
+                  from: 'cr7ronadol12345@gmail.com',
+                  // to: 'quyetthangmarvel@gmail.com',
+                  to: userData.email,
+                  subject: `[${jobData.room.name}] THÔNG BÁO HỦY HỢP ĐỒNG CHO THUÊ`, //tháng trước
+                  text: `Hợp đồng cho thuê phòng ${jobData.room.name} thuộc dãy ${jobData.motelRoom.name} của quý khách đã bị hủy vì quý khách chưa hoàn thành tiền phòng tháng ${moment().month()}/${moment().year()}.`,
+                };
+  
+                // Gửi email
+                transporter.sendMail(mailOptions, function (error, info) {
+                  if (error) {
+                    console.error(error);
+                  } else {
+                    // console.log('Email đã được gửi: ' + info.response);
+                  }
+                });
+              }
             }
           }
         } else {
@@ -1059,8 +1100,15 @@ export default (agenda) => {
         const rentalPeriod = jobData.rentalPeriod;
 
         const checkOutTime = moment(checkInTime).add(rentalPeriod, "months").subtract(1, "days"); // ngày cuối cùng được ở
-     
 
+        //update expireTime, because default expireTime = createTime + 15(days);
+        if(moment(orderData.expireTime).date() !== 4) {
+          await orderModel.findOneAndUpdate(
+            {_id: orderData._id},
+            {expireTime: checkOutTime.date(4).endOf('day').toDate()}
+          )
+        }
+     
         if (orderData.isCompleted === false) {
 
           const userData = await userModel.findOne({ _id: userId })
@@ -1096,11 +1144,21 @@ export default (agenda) => {
                 });
   
                 // console.log(`Gửi tới mail: ${userData.email}`);
+              } else {
+                await global.agendaInstance.agenda.schedule(
+                  moment()
+                    .add(1, "days")
+                    .startOf("days")
+                    .toDate(),
+                  "RemindUserMonthlyToExpirePlus2Day_Expire1Or2ThisMonth",
+                  { orderId: job.attrs.data.orderId }
+                );
               }
             }
             await global.agendaInstance.agenda.schedule(
               moment()
                 .add(1, "days")
+                .startOf("days")
                 .toDate(),
               "RemindUserMonthlyToExpirePlus2Day_Expire1Or2ThisMonth",
               { orderId: job.attrs.data.orderId }
@@ -1135,7 +1193,7 @@ export default (agenda) => {
               electricNumber = 0;
             } else {
               electricNumber = dataElectricAll.totalkWhTime;
-              labelTime = dataElectricAll.labelTimel;
+              labelTime = dataElectricAll.labelTime;
               kWhData = dataElectricAll.kWhData;
             }
 
@@ -1272,13 +1330,43 @@ export default (agenda) => {
                 .exec();
 
             }
+
+            if(userData) {
+              if (userData.email) {
+                const transporter = nodemailer.createTransport({
+                  service: 'gmail',
+                  auth: {
+                    user: 'cr7ronadol12345@gmail.com',
+                    pass: 'wley oiaw yhpl oupy'
+                  }
+                });
+  
+                const mailOptions = {
+                  from: 'cr7ronadol12345@gmail.com',
+                  // to: 'quyetthangmarvel@gmail.com',
+                  to: userData.email,
+                  subject: `[${jobData.room.name}] THÔNG BÁO HỦY HỢP ĐỒNG CHO THUÊ`, //tháng trước
+                  text: `Hợp đồng cho thuê phòng ${jobData.room.name} thuộc dãy ${jobData.motelRoom.name} của quý khách đã bị hủy vì quý khách chưa hoàn thành tiền phòng tháng ${moment().month()}/${moment().year()}.`,
+                };
+  
+                // Gửi email
+                transporter.sendMail(mailOptions, function (error, info) {
+                  if (error) {
+                    console.error(error);
+                  } else {
+                    // console.log('Email đã được gửi: ' + info.response);
+                  }
+                });
+  
+              }
+            }
           }
         } else {
           //NOTE: thêm job thanh toán những ngày còn lại
           if (moment().date() <= checkOutTime.date()) {
             await global.agendaInstance.agenda.schedule(
               checkOutTime
-                .add(1, "days")
+                .add(1, "days").startOf('day')
                 .toDate(),
               "CreateOrderForRestDayInMonExpireContract_At1Or2Day",
               { jobId: jobData._id }
@@ -1321,11 +1409,15 @@ export default (agenda) => {
           const endTime = checkOutDay.endOf("day");
           const end = endTime.format("YYYY-MM-DD");
 
-          const expireTime = endTime.add(15, "days");
+          const expireTime = endTime.date(6).endOf('day');
           
           // let electricNumber = await EnergyController.countElectricV2(job.attrs.data.jobId, start, end);
           const roomId = resData.room;
-          let dataElectricAll = await EnergyController.calculateElectricUsedDayToDayHaveLabelTime(roomId, start, end);
+          let dataElectricAll = await EnergyController.calculateElectricUsedDayToDayHaveLabelTime(
+            roomId,
+            start,
+            end
+          );
 
           let electricNumber = 0;
           let labelTime: string[] = [];
@@ -1334,7 +1426,7 @@ export default (agenda) => {
             electricNumber = 0;
           } else {
             electricNumber = dataElectricAll.totalkWhTime;
-            labelTime = dataElectricAll.labelTimel;
+            labelTime = dataElectricAll.labelTime;
             kWhData = dataElectricAll.kWhData;
           }
   
@@ -1394,7 +1486,8 @@ export default (agenda) => {
             { orderId: orderData._id }
           );
   
-        }       }
+        }
+      }
       done();
     } catch (err) {
       done();
@@ -1705,7 +1798,6 @@ export default (agenda) => {
 
           const jobData = await JobController.getJobNoImg(jobId);
 
-
           if (moment().date() <= 15) { //note gốc là: 15
             if (userData) {
               if (userData.email) {
@@ -1734,13 +1826,25 @@ export default (agenda) => {
                   }
                 });
   
-                // console.log(`Gửi tới mail: ${userData.email}`);
+              } else {
+                console.log("LAANFNNN 1")
+                await global.agendaInstance.agenda.schedule(
+                  moment()
+                    .add(1, "days")
+                    .startOf("day")
+                    .toDate(),
+                  "RemindUserMonthly15EveryDay_ExpireNextMonth",
+                  { orderId: job.attrs.data.orderId }
+                );
               }
             }
+
+            console.log("LAANFNNN 2")
 
             await global.agendaInstance.agenda.schedule(
               moment()
                 .add(1, "days")
+                .startOf("day")
                 .toDate(),
               "RemindUserMonthly15EveryDay_ExpireNextMonth",
               { orderId: job.attrs.data.orderId }
@@ -1776,7 +1880,7 @@ export default (agenda) => {
               electricNumber = 0;
             } else {
               electricNumber = dataElectricAll.totalkWhTime;
-              labelTime = dataElectricAll.labelTimel;
+              labelTime = dataElectricAll.labelTime;
               kWhData = dataElectricAll.kWhData;
             }
             
@@ -1908,6 +2012,36 @@ export default (agenda) => {
             await userModel
               .findOneAndUpdate({ _id: userId }, userUpdateData, { new: true })
               .exec();
+
+            if(userData) {
+              if (userData.email) {
+                const transporter = nodemailer.createTransport({
+                  service: 'gmail',
+                  auth: {
+                    user: 'cr7ronadol12345@gmail.com',
+                    pass: 'wley oiaw yhpl oupy'
+                  }
+                });
+  
+                const mailOptions = {
+                  from: 'cr7ronadol12345@gmail.com',
+                  // to: 'quyetthangmarvel@gmail.com',
+                  to: userData.email,
+                  subject: `[${jobData.room.name}] THÔNG BÁO HỦY HỢP ĐỒNG CHO THUÊ`, //tháng trước
+                  text: `Hợp đồng cho thuê phòng ${jobData.room.name} thuộc dãy ${jobData.motelRoom.name} của quý khách đã bị hủy vì quý khách chưa hoàn thành tiền phòng tháng ${moment().month()}/${moment().year()}.`,
+                };
+  
+                // Gửi email
+                transporter.sendMail(mailOptions, function (error, info) {
+                  if (error) {
+                    console.error(error);
+                  } else {
+                    // console.log('Email đã được gửi: ' + info.response);
+                  }
+                });
+  
+              }
+            }
           }
         } else {
           // Đã thanh toán, cuối tháng tạo bill mới
@@ -1966,7 +2100,12 @@ export default (agenda) => {
           const checkOutDay = moment(jobData.checkInTime).add(rentalPeriod, "months").subtract(1, "days"); // chính xác ngày cuối cùng còn được ở
           const timeCal = moment().subtract(1, "months"); // tháng trước
 
-          // const parsedTime = moment(checkOutDay).format("DD/MM/YYYY");
+          if(moment(orderData.expireTime).date() !== checkOutDay.date()) {
+            await orderModel.findOneAndUpdate(
+              {_id: orderData._id},
+              {expireTime: checkOutDay.endOf('day').toDate()}
+            )
+          }
 
           if (moment().date() <= checkOutDay.date()) { //lập lịch cho sau ngày hết hạn để hủy, không còn gửi mail
             if (userData) {
@@ -1978,9 +2117,7 @@ export default (agenda) => {
                     pass: 'wley oiaw yhpl oupy'
                   }
                 });
-  
-                // const files = ['a.txt', 'b.pdf', 'c.png']
-  
+    
                 const mailOptions = {
                   from: 'cr7ronadol12345@gmail.com',
                   // to: 'quyetthangmarvel@gmail.com',
@@ -1999,6 +2136,14 @@ export default (agenda) => {
                 });
   
                 // console.log(`Gửi tới mail: ${userData.email}`);
+              } else {
+                await global.agendaInstance.agenda.schedule(
+                  moment()
+                    .add(1, "days")
+                    .toDate(),
+                  "RemindUserMonthlyToExpireDay_ExpireThisMonth",
+                  { orderId: job.attrs.data.orderId }
+                );
               }
             }
 
@@ -2039,7 +2184,7 @@ export default (agenda) => {
               electricNumber = 0;
             } else {
               electricNumber = dataElectricAll.totalkWhTime;
-              labelTime = dataElectricAll.labelTimel;
+              labelTime = dataElectricAll.labelTime;
               kWhData = dataElectricAll.kWhData;
             }
 
@@ -2176,6 +2321,34 @@ export default (agenda) => {
                 .exec();
             }
 
+            if(userData) {
+              if (userData.email) {
+                const transporter = nodemailer.createTransport({
+                  service: 'gmail',
+                  auth: {
+                    user: 'cr7ronadol12345@gmail.com',
+                    pass: 'wley oiaw yhpl oupy'
+                  }
+                });
+  
+                const mailOptions = {
+                  from: 'cr7ronadol12345@gmail.com',
+                  // to: 'quyetthangmarvel@gmail.com',
+                  to: userData.email,
+                  subject: `[${jobData.room.name}] THÔNG BÁO HỦY HỢP ĐỒNG CHO THUÊ`, //tháng trước
+                  text: `Hợp đồng cho thuê phòng ${jobData.room.name} thuộc dãy ${jobData.motelRoom.name} của quý khách đã bị hủy vì quý khách chưa hoàn thành tiền phòng tháng ${moment().month()}/${moment().year()}.`,
+                };
+  
+                // Gửi email
+                transporter.sendMail(mailOptions, function (error, info) {
+                  if (error) {
+                    console.error(error);
+                  } else {
+                    // console.log('Email đã được gửi: ' + info.response);
+                  }
+                });
+              }
+            }
           }
         } else {
           // Đã thanh toán, Tạo bill mới những ngày còn lại của tháng
@@ -2242,6 +2415,13 @@ export default (agenda) => {
           const checkOutDay = moment(jobData.checkInTime).add(rentalPeriod, "months").subtract(1, "days"); // chính xác ngày cuối cùng còn được ở
           const timeCal = moment().subtract(1, "months"); // tháng trước
 
+          if(moment(orderData.expireTime).date() !== 15) {
+            await orderModel.findOneAndUpdate(
+              {_id: orderData._id},
+              {expireTime: checkOutDay.date(15).endOf('day').toDate()}
+            )
+          }
+
           if (moment().date() <= 15) {
             if (userData) {
               if (userData.email) {
@@ -2271,12 +2451,22 @@ export default (agenda) => {
                 });
   
                 // console.log(`Gửi tới mail: ${userData.email}`);
+              } else {
+                await global.agendaInstance.agenda.schedule(
+                  moment()
+                    .add(1, "days")
+                    .startOf("days")
+                    .toDate(),
+                  "RemindUserMonthlyToDay15_ExpireThisMonth",
+                  { orderId: job.attrs.data.orderId }
+                );
               }
             }
 
             await global.agendaInstance.agenda.schedule(
               moment()
                 .add(1, "days")
+                .startOf("days")
                 .toDate(),
               "RemindUserMonthlyToDay15_ExpireThisMonth",
               { orderId: job.attrs.data.orderId }
@@ -2312,7 +2502,7 @@ export default (agenda) => {
               electricNumber = 0;
             } else {
               electricNumber = dataElectricAll.totalkWhTime;
-              labelTime = dataElectricAll.labelTimel;
+              labelTime = dataElectricAll.labelTime;
               kWhData = dataElectricAll.kWhData;
             }
                   
@@ -2448,6 +2638,34 @@ export default (agenda) => {
                 .exec();
             }
 
+            if(userData) {
+              if (userData.email) {
+                const transporter = nodemailer.createTransport({
+                  service: 'gmail',
+                  auth: {
+                    user: 'cr7ronadol12345@gmail.com',
+                    pass: 'wley oiaw yhpl oupy'
+                  }
+                });
+  
+                const mailOptions = {
+                  from: 'cr7ronadol12345@gmail.com',
+                  // to: 'quyetthangmarvel@gmail.com',
+                  to: userData.email,
+                  subject: `[${jobData.room.name}] THÔNG BÁO HỦY HỢP ĐỒNG CHO THUÊ`, //tháng trước
+                  text: `Hợp đồng cho thuê phòng ${jobData.room.name} thuộc dãy ${jobData.motelRoom.name} của quý khách đã bị hủy vì quý khách chưa hoàn thành tiền phòng tháng ${moment().month()}/${moment().year()}.`,
+                };
+  
+                // Gửi email
+                transporter.sendMail(mailOptions, function (error, info) {
+                  if (error) {
+                    console.error(error);
+                  } else {
+                    // console.log('Email đã được gửi: ' + info.response);
+                  }
+                });
+              }
+            }
           }
         } else {
           // Đã thanh toán, Tạo bill mới những ngày còn lại của tháng
@@ -2545,11 +2763,10 @@ export default (agenda) => {
             electricNumber = 0;
           } else {
             electricNumber = dataElectricAll.totalkWhTime;
-            labelTime = dataElectricAll.labelTimel;
+            labelTime = dataElectricAll.labelTime;
             kWhData = dataElectricAll.kWhData;
           }
   
-          
           const roomData = await roomModel.findOne({_id: roomId})
                                                                       .lean()
                                                                       .exec();
@@ -2646,6 +2863,13 @@ export default (agenda) => {
           const rentalPeriod = jobData.rentalPeriod;
           const checkOutDay = moment(checkInDay).add(rentalPeriod, "months").subtract(1, "days"); //  chính xác ngày ở cuối cùng
           const checkOutDayPlus3 = checkOutDay.add(3, "days");// số ngày để đóng hóa đơn cuối (3 ngày: ngày hiện tại + 2 ngày)
+
+          if(moment(orderData.expireTime).date() !== checkOutDayPlus3.date()) {
+            await orderModel.findOneAndUpdate(
+              {_id: orderData._id},
+              {expireTime: checkOutDayPlus3.endOf('day').toDate()}
+            )
+          }
   
           if (moment().diff(checkOutDayPlus3) <= 0) {
             await global.agendaInstance.agenda.schedule(
@@ -2685,6 +2909,14 @@ export default (agenda) => {
                 });
   
                 // console.log(`Gửi tới mail: ${userData.email}`);
+              } else {
+                await global.agendaInstance.agenda.schedule(
+                  moment()
+                    .add("1", "days")
+                    .toDate(),
+                  "CheckOrderStatus_In3LastDayExpireContract",
+                  { orderId: orderData._id }
+                );
               }
             }
           } else {
@@ -2919,7 +3151,8 @@ export default (agenda) => {
           } else if (checkOutDay.month() === moment().month()) {
             //Hết thời gian gia hạn, hết hợp đồng
             await global.agendaInstance.agenda.schedule(
-              moment().add("2", 'minutes').toDate(), //note: 5
+              // moment().add("2", 'minutes').toDate(), //note: 5
+              checkOutDay.endOf("days").toDate(),
               "CreateOrderForRestDayInMonBeforeExpireContract",
               { jobId: jobId }
             );
