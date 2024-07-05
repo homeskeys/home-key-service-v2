@@ -13,6 +13,7 @@ const jobRoute = express.Router();
 /* ------------------------------- PUBLIC APIS ------------------------------ */
 
 /* ---------------------------- CHECK PERMISSION ---------------------------- */
+// jobRoute.route("/:id/active").put(JobController.activeJob);
 
 jobRoute.route("/getJobByRoom/:idRoom").get(JobController.getJobByRoom);
 
