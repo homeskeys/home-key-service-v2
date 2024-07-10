@@ -1176,6 +1176,8 @@ export default class JobController {
         expireTime: moment().add(7, "days").endOf("day").toDate(),
       });
 
+      console.log("NGÀY TẠOOOO", moment())
+
       resData = await jobModel
         .findOneAndUpdate(
           { _id: resData._id },
@@ -1237,6 +1239,12 @@ export default class JobController {
           .toDate(),
         "CheckOrderStatus",
         { orderId: orderData._id }
+      );
+
+      await global.agendaInstance.agenda.schedule(
+        moment().add(2, "minutes").toDate(),
+        "RemindUserRenewContractAndChangeStatusRoomBeforeOneMonth",
+        { jobId: resData._id }
       );
 
       return HttpResponse.returnSuccessResponse(res, resData);
@@ -2142,6 +2150,20 @@ export default class JobController {
             const result = await jobModel.findOneAndUpdate({ _id: id }, {
               rentalPeriod: renewedMon,
             });
+
+            //update job check
+            const jobs = await global.agendaInstance.agenda.jobs(
+            { 
+              name: "RemindUserRenewContractAndChangeStatusRoomBeforeOneMonth",
+              "data.jobId": dataJob._id,
+              nextRunAt: { $ne: null }
+            });
+
+            if(jobs.length > 0) {
+              const job = jobs[0];
+              job.schedule(moment().add(1, "minutes").toDate());
+              await job.save();
+            }
 
             const resData = "Gia hạn hợp đồng thành công!"
 
