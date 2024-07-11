@@ -25,6 +25,7 @@ export default (agenda) => {
           title: "Thông báo đóng tiền phòng",
           content: "Vui lòng thanh toán tiền phòng trong vòng 5 ngày.",
           user: resData.user,
+          isRead: false,
         });
 
         const orderData = await orderModel.create({
@@ -551,11 +552,12 @@ export default (agenda) => {
         let roomId = jobData.room;
 
         if (!jobData.isActived && !jobData.isDeleted) {
-          // await NotificationController.createNotification({
-          //   title: "Thông báo hết hạn kích hoạt",
-          //   content: "Bạn đã quá hạn nhận phòng. Hệ thống tự hủy đặt phòng.",
-          //   user: jobData.user,
-          // });
+          await NotificationController.createNotification({
+            title: "Thông báo hết hạn kích hoạt",
+            content: "Bạn đã quá hạn nhận phòng. Hệ thống tự hủy đặt phòng!",
+            user: jobData.user,
+            isRead: false,
+          });
 
           const jobDataAfterUpdate = await jobModel
             .findOneAndUpdate(
@@ -705,6 +707,7 @@ export default (agenda) => {
           } else if (moment().month() === checkOutTime.month()) {
             if (checkOutTime.date() <= 2) {       
               //CHECKED       
+            if (checkOutTime.date() <= 2) {
               await global.agendaInstance.agenda.schedule(
                 moment().add("2", 'minutes').toDate(), //note: 5
                 "RemindUserMonthlyToExpirePlus2Day_Expire1Or2ThisMonth", 
@@ -760,6 +763,7 @@ export default (agenda) => {
         }
       }
       done();
+    }
     } catch (err) {
       done();
     }
