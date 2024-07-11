@@ -755,17 +755,19 @@ export default class RoomController {
             title: "Thông báo đóng tiền phòng",
             content: "Vui lòng thanh toán tiền phòng trong vòng 5 ngày.",
             user: JobData.user,
+            isRead: false,
           });
           const newOrderData = await orderModel.create({
             user: JobData.user,
             job: JobData._id,
             isCompleted: false,
-            description: `Tiền phòng tháng ${moment().month() + 1}/${moment().year()}`,
+            description: `Tiền phòng tháng ${moment().month() +
+              1}/${moment().year()}`,
             amount: Math.floor(
               (JobData.room.price / moment(JobData.checkInTime).daysInMonth()) *
-              moment(JobData.checkInTime)
-                .endOf("month")
-                .diff(moment(JobData.checkInTime), "days")
+                moment(JobData.checkInTime)
+                  .endOf("month")
+                  .diff(moment(JobData.checkInTime), "days")
             ),
             type: "monthly",
           });
@@ -975,12 +977,12 @@ export default class RoomController {
           isCompleted: true,
           previousElectricityNumber:
             data.previousElectricityNumber &&
-              !isNaN(data.previousElectricityNumber)
+            !isNaN(data.previousElectricityNumber)
               ? parseInt(data.previousElectricityNumber)
               : undefined,
           currentElectricityNumber:
             data.currentElectricityNumber &&
-              !isNaN(data.currentElectricityNumber)
+            !isNaN(data.currentElectricityNumber)
               ? parseInt(data.currentElectricityNumber)
               : undefined,
           previousWaterNumber:
@@ -1313,8 +1315,6 @@ export default class RoomController {
     return resData;
   }
 
-
-
   // Get valid data for create room
   static async getValidDataForRoomByRawData(
     rawData: any,
@@ -1342,7 +1342,7 @@ export default class RoomController {
       { fieldName: "acreage", errorMessage: "motelRoom.room.acreage.invalid" },
     ];
 
-    for (let i = 0; i < numberFieldsAndInvalidMessages.length; i++) { }
+    for (let i = 0; i < numberFieldsAndInvalidMessages.length; i++) {}
 
     let validData = {
       name: rawData.name,
@@ -1485,7 +1485,7 @@ export default class RoomController {
       const wifiPrice = req.body.wifiPrice;
       const garbagePrice = req.body.garbagePrice;
 
-      console.log('req.body', req.body);
+      console.log("req.body", req.body);
 
       const vihicle: number = req.body.vihicle;
       const person: number = req.body.person;

@@ -136,7 +136,6 @@ export default class PaymentController {
             }
           )
           .exec();
-
       }
       // dặt cọc
       if (orderData.type === "deposit") {
@@ -236,6 +235,7 @@ export default class PaymentController {
           title: "Thông báo đóng tiền phòng",
           content: "Vui lòng thanh toán tiền phòng trong vòng 5 ngày.",
           user: jobData.user,
+          isRead: false,
         });
 
         console.log("jobData", jobData.checkInTime);
@@ -253,11 +253,12 @@ export default class PaymentController {
         // );
 
         await global.agendaInstance.agenda.schedule(
-          moment().add("2", 'minutes').toDate(),
-          'CreateFirstMonthOrder',
+          moment()
+            .add("2", "minutes")
+            .toDate(),
+          "CreateFirstMonthOrder",
           { jobId: jobData._id }
         );
-
 
         // const newOrderData = await orderModel.create({
         //   user: jobData.user,
@@ -284,7 +285,6 @@ export default class PaymentController {
         //     }
         //   )
         //   .exec();
-
       }
 
       return HttpResponse.returnSuccessResponse(
