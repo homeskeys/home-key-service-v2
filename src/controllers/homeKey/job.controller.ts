@@ -1,8 +1,7 @@
 import { NextFunction, Request, Response } from "express";
 import * as moment from "moment";
 import * as mongoose from "mongoose";
-var nodemailer = require('nodemailer');
-
+var nodemailer = require("nodemailer");
 
 import { helpers } from "../../utils";
 
@@ -13,7 +12,7 @@ import NotificationController from "./notification";
 import * as lodash from "lodash";
 import { JobModel } from "models/homeKey/job";
 import job from "services/agenda/jobs/job";
-import axios from 'axios';
+import axios from "axios";
 
 export default class JobController {
   /**
@@ -127,10 +126,7 @@ export default class JobController {
       }
 
       if (roomData.status !== "available") {
-        return HttpResponse.returnBadRequestResponse(
-          res,
-          "Phòng Đã Được Đặt"
-        );
+        return HttpResponse.returnBadRequestResponse(res, "Phòng Đã Được Đặt");
       }
       const dayID = moment(roomData.availableDate).format("DD/MM/YYYY");
 
@@ -222,17 +218,22 @@ export default class JobController {
         title: "Xác nhận đặt cọc",
         content: "Bạn đã đặt phòng thành công",
         user: req["userId"],
+        isRead: false,
       });
 
       const orderData = await orderModel.create({
         user: req["userId"],
         job: resData._id,
         isCompleted: false,
-        description: `Tiền cọc phòng tháng ${myDateOld.split("/")[1]}/${myDateOld.split("/")[2]
-          }`,
+        description: `Tiền cọc phòng tháng ${myDateOld.split("/")[1]}/${
+          myDateOld.split("/")[2]
+        }`,
         amount: data.deposit,
         type: "deposit",
-        expireTime: moment(resData.checkInTime).add(7, "days").endOf("day").toDate(),
+        expireTime: moment(resData.checkInTime)
+          .add(7, "days")
+          .endOf("day")
+          .toDate(),
       });
 
       resData = await jobModel.findOneAndUpdate(
@@ -248,7 +249,8 @@ export default class JobController {
       // Check 7 days after check in time
       await global.agendaInstance.agenda.schedule(
         moment(resData.checkInTime)
-          .add(7, "days").endOf("day")
+          .add(7, "days")
+          .endOf("day")
           .toDate(),
         "CheckJobStatus",
         { jobId: resData._id }
@@ -318,7 +320,6 @@ export default class JobController {
     req: Request,
     res: Response,
     next: NextFunction
-
   ): Promise<any> {
     try {
       //Init models
@@ -330,12 +331,8 @@ export default class JobController {
         motelRoom: motelRoomModel,
         order: orderModel,
       } = global.mongoModel;
-
-    } catch (error) {
-
-    }
+    } catch (error) {}
   }
-
 
   static async getJobList(
     req: Request,
@@ -344,7 +341,11 @@ export default class JobController {
   ): Promise<any> {
     try {
       // Init user model`
-      const { job: jobModel, floor: floorModel, motelRoom: motelRoomModel } = global.mongoModel;
+      const {
+        job: jobModel,
+        floor: floorModel,
+        motelRoom: motelRoomModel,
+      } = global.mongoModel;
       let { sortBy, size, page, keyword } = req.query;
       const sortType = req.query.sortType === "ascending" ? 1 : -1;
       let condition, sort;
@@ -389,19 +390,26 @@ export default class JobController {
 
       const resData = await jobModel.paginate(size, page, condition);
 
-      resData.data = await Promise.all(resData.data.map(async (item) => {
-        const floorData = await floorModel.findOne({ rooms: item.room._id }).lean().exec();
+      resData.data = await Promise.all(
+        resData.data.map(async (item) => {
+          const floorData = await floorModel
+            .findOne({ rooms: item.room._id })
+            .lean()
+            .exec();
 
-        if (floorData) {
-          const motelData = await motelRoomModel.findOne({ floors: { $in: [floorData._id] } }).lean().exec();
-          const motelName = motelData ? motelData.name : "";
-          item.motelName = motelName;
-        }
+          if (floorData) {
+            const motelData = await motelRoomModel
+              .findOne({ floors: { $in: [floorData._id] } })
+              .lean()
+              .exec();
+            const motelName = motelData ? motelData.name : "";
+            item.motelName = motelName;
+          }
 
-        return item;
-      }));
+          return item;
+        })
+      );
       console.log("Check resData: ", resData);
-
 
       return HttpResponse.returnSuccessResponse(res, resData);
     } catch (e) {
@@ -549,7 +557,9 @@ export default class JobController {
       const dataRes = [];
       for (let i = 0; i < resData.data.length; i++) {
         if (resData.data[i].user._id == req.params.id) {
-          const jobData = await JobController.getJobNoImg(resData.data[i].job._id); //note: nguyên bản là getJob, tuy nhiên lỗi đường path tìm ảnh nên dùng tạm
+          const jobData = await JobController.getJobNoImg(
+            resData.data[i].job._id
+          ); //note: nguyên bản là getJob, tuy nhiên lỗi đường path tìm ảnh nên dùng tạm
           if (jobData) {
             resData.data[i].room = jobData.room;
           } else {
@@ -628,13 +638,15 @@ export default class JobController {
         title: "Xác nhận hủy cọc",
         content: "Bạn đã hủy cọc phòng thành công",
         user: req["userId"],
+        isRead: false,
       });
 
       // let resData = await jobModel
       //   .remove({ _id: req.params.id })
       //   .lean()
       //   .exec();
-      let resData = await jobModel.findOneAndUpdate({ _id: req.params.id }, { isDeleted: true })
+      let resData = await jobModel
+        .findOneAndUpdate({ _id: req.params.id }, { isDeleted: true })
         .lean()
         .exec();
       // resData = await jobModel.find()
@@ -688,7 +700,10 @@ export default class JobController {
         availableRoom: lodash.sumBy(motelRoomData.floors, "availableRoom"),
         rentedRoom: lodash.sumBy(motelRoomData.floors, "rentedRoom"),
         depositedRoom: lodash.sumBy(motelRoomData.floors, "depositedRoom"),
-        soonExpireContractRoom: lodash.sumBy(motelRoomData.floors, "soonExpireContractRoom"),
+        soonExpireContractRoom: lodash.sumBy(
+          motelRoomData.floors,
+          "soonExpireContractRoom"
+        ),
       };
 
       await motelRoomModel
@@ -771,6 +786,7 @@ export default class JobController {
         title: "Xác nhận hủy cọc",
         content: "Bạn đã hủy cọc phòng thành công",
         user: req["userId"],
+        isRead: false,
       });
 
       let resData = await jobModel
@@ -997,8 +1013,8 @@ export default class JobController {
   ): Promise<any> {
     try {
       const data = req.body;
-      console.log({data})
-      console.log("ahsdfkjhas", req["userId"])
+      console.log({ data });
+      console.log("ahsdfkjhas", req["userId"]);
       let images = [];
 
       for (let i = 0; i < data.length; i++) {
@@ -1169,11 +1185,16 @@ export default class JobController {
         user: resData.user,
         job: resData._id,
         isCompleted: false,
-        description: `Tiền thanh toán khi nhận phòng tháng ${checkInTime.split("/")[0]}/${checkInTime.split("/")[2]}`,
+        description: `Tiền thanh toán khi nhận phòng tháng ${
+          checkInTime.split("/")[0]
+        }/${checkInTime.split("/")[2]}`,
         amount: resData.afterCheckInCost,
         type: "afterCheckInCost",
         // expireTime: moment(resData.checkInTime).add(7, "days").endOf("day").toDate(),
-        expireTime: moment().add(7, "days").endOf("day").toDate(),
+        expireTime: moment()
+          .add(7, "days")
+          .endOf("day")
+          .toDate(),
       });
 
       resData = await jobModel
@@ -1233,7 +1254,8 @@ export default class JobController {
 
       await global.agendaInstance.agenda.schedule(
         moment()
-          .add(7, "days").endOf("day")
+          .add(7, "days")
+          .endOf("day")
           .toDate(),
         "CheckOrderStatus",
         { orderId: orderData._id }
@@ -2078,10 +2100,10 @@ export default class JobController {
     const { job: jobModel } = global.mongoModel;
     try {
       const idRoom = req.params.idRoom;
-      console.log({ idRoom })
+      console.log({ idRoom });
 
       const resData = await jobModel.find({
-        room: mongoose.Types.ObjectId(idRoom)
+        room: mongoose.Types.ObjectId(idRoom),
       });
 
       console.log({ resData });
@@ -2102,7 +2124,7 @@ export default class JobController {
   static async renewContract(
     req: Request,
     res: Response,
-    next: NextFunction,
+    next: NextFunction
   ): Promise<any> {
     try {
       const id = req.params.idJob;
@@ -2113,9 +2135,10 @@ export default class JobController {
 
       const { job: jobModel } = global.mongoModel;
 
-      const dataJob = await jobModel.findOne({ _id: id })
+      const dataJob = await jobModel
+        .findOne({ _id: id })
         .lean()
-        .exec()
+        .exec();
 
       if (dataJob) {
         if (numberMon && dataJob.rentalPeriod && dataJob.checkInTime) {
@@ -2125,10 +2148,12 @@ export default class JobController {
 
           const today: Date = new Date();
           const checkInTimeTemp: Date = new Date(checkInTime);
-          checkInTimeTemp.setMonth(checkInTime.getMonth() + currentRentalPeriod);
+          checkInTimeTemp.setMonth(
+            checkInTime.getMonth() + currentRentalPeriod
+          );
 
-          console.log({ today })
-          console.log({ checkInTimeTemp })
+          console.log({ today });
+          console.log({ checkInTimeTemp });
 
           const subTime: number = checkInTimeTemp.getTime() - today.getTime();
 
@@ -2139,19 +2164,21 @@ export default class JobController {
 
           if (timeDiffInDays > 15) {
             const renewedMon = currentRentalPeriod + numberAddRenew;
-            const result = await jobModel.findOneAndUpdate({ _id: id }, {
-              rentalPeriod: renewedMon,
-            });
+            const result = await jobModel.findOneAndUpdate(
+              { _id: id },
+              {
+                rentalPeriod: renewedMon,
+              }
+            );
 
-            const resData = "Gia hạn hợp đồng thành công!"
+            const resData = "Gia hạn hợp đồng thành công!";
 
             return HttpResponse.returnSuccessResponse(res, resData);
-
           } else {
             return HttpResponse.returnBadRequestResponse(
               res,
               "Đã hết thời gian gia hạn hợp đồng!"
-            )
+            );
           }
         } else {
           return HttpResponse.returnBadRequestResponse(
@@ -2163,9 +2190,8 @@ export default class JobController {
         return HttpResponse.returnBadRequestResponse(
           res,
           "Không tìm thấy job!"
-        )
+        );
       }
-
     } catch (e) {
       console.log({ e });
       next(e);
@@ -2176,10 +2202,9 @@ export default class JobController {
   static async setStatusRoomAuto(
     req: Request,
     res: Response,
-    next: NextFunction,
+    next: NextFunction
   ): Promise<any> {
     try {
-
       const {
         room: roomModel,
         floor: floorModel,
@@ -2189,18 +2214,16 @@ export default class JobController {
         order: orderModel,
       } = global.mongoModel;
 
-
       // Hủy cọc sau 7 ngày
       const dayCancelDeposited: Date = new Date();
       console.log({ dayCancelDeposited });
 
-
       dayCancelDeposited.setDate(dayCancelDeposited.getDate() - 7);
-      const tempDay = dayCancelDeposited.toISOString().split('T')[0];
+      const tempDay = dayCancelDeposited.toISOString().split("T")[0];
       console.log("day - 7: ", tempDay);
 
       const startDayQuery = new Date(tempDay);
-      console.log({ startDayQuery })
+      console.log({ startDayQuery });
 
       const endDayQuery = new Date(tempDay);
       endDayQuery.setHours(30, 59, 59, 59.99);
@@ -2219,12 +2242,11 @@ export default class JobController {
             checkInTime: {
               // $gte: startDayQuery,
               $lte: startDayQuery,
-            }
+            },
           });
           if (jobByRoom) {
             listJobEpireDeposit.push(jobByRoom);
           }
-
         }
 
         console.log("listJobEpireDeposit", listJobEpireDeposit);
@@ -2234,10 +2256,9 @@ export default class JobController {
           for (let i = 0; i < listJobEpireDeposit.length; i++) {
             // Cập nhật cả motel, floor, xóa job
 
-
-
-            const jobData = await JobController.getJobNoImg(listJobEpireDeposit[i]._id);
-
+            const jobData = await JobController.getJobNoImg(
+              listJobEpireDeposit[i]._id
+            );
 
             //xóa job
             let resData = await jobModel
@@ -2245,23 +2266,26 @@ export default class JobController {
               .lean()
               .exec();
 
-
-
             //xóa order
             await orderModel.remove({ _id: { $in: jobData.orders } }).exec();
 
             //Cập nhật trạng thái phòng, xóa người thuê
 
-            const roomInfor = await roomModel.findOne({ _id: listJobEpireDeposit[i].room })
+            const roomInfor = await roomModel
+              .findOne({ _id: listJobEpireDeposit[i].room })
               .lean()
-              .exec()
+              .exec();
             const userId = roomInfor.rentedBy;
 
-            await roomModel.findOneAndUpdate({ _id: listJobEpireDeposit[i].room }, {
-              status: "available",
-              $unset: { rentedBy: 1 },
-            })
-              .exec()
+            await roomModel
+              .findOneAndUpdate(
+                { _id: listJobEpireDeposit[i].room },
+                {
+                  status: "available",
+                  $unset: { rentedBy: 1 },
+                }
+              )
+              .exec();
 
             //cập nhật lại floor
             let floorData = await floorModel
@@ -2280,7 +2304,9 @@ export default class JobController {
                   availableRoom: roomGroup["available"]
                     ? roomGroup["available"].length
                     : 0,
-                  rentedRoom: roomGroup["rented"] ? roomGroup["rented"].length : 0,
+                  rentedRoom: roomGroup["rented"]
+                    ? roomGroup["rented"].length
+                    : 0,
                   depositedRoom: roomGroup["deposited"]
                     ? roomGroup["deposited"].length
                     : 0,
@@ -2297,9 +2323,15 @@ export default class JobController {
               .exec();
 
             let updateData = {
-              availableRoom: lodash.sumBy(motelRoomData.floors, "availableRoom"),
+              availableRoom: lodash.sumBy(
+                motelRoomData.floors,
+                "availableRoom"
+              ),
               rentedRoom: lodash.sumBy(motelRoomData.floors, "rentedRoom"),
-              depositedRoom: lodash.sumBy(motelRoomData.floors, "depositedRoom"),
+              depositedRoom: lodash.sumBy(
+                motelRoomData.floors,
+                "depositedRoom"
+              ),
             };
 
             await motelRoomModel
@@ -2318,9 +2350,8 @@ export default class JobController {
               .exec();
           }
         } else {
-          console.log("Hiện tại chưa có phòng nào quá hạn cọc giữ phòng!")
+          console.log("Hiện tại chưa có phòng nào quá hạn cọc giữ phòng!");
         }
-
       } else {
         console.log("Hiện không có phòng nào được cọc!");
       }
@@ -2330,9 +2361,9 @@ export default class JobController {
       // console.log(a.checkInTime);
       // console.log(a.checkInTime.setMonth(a.checkInTime.getMonth() + 3));
       // console.log(a.checkInTime);
-      // console.log(a.checkInTime.getMonth() + 1);  
-      // console.log(a.checkInTime.getFullYear());  
-      // console.log(typeof(a.checkInTime.getFullYear()));  
+      // console.log(a.checkInTime.getMonth() + 1);
+      // console.log(a.checkInTime.getFullYear());
+      // console.log(typeof(a.checkInTime.getFullYear()));
       // console.log(moment().year());
       // console.log(typeof(moment().year()));
       // console.log(moment().month());
@@ -2340,7 +2371,9 @@ export default class JobController {
       // console.log(moment().date());
       // console.log(typeof(moment().date()));
 
-      const jobData = await JobController.getJobNoImg("661e2d3ccf1e78abdc2e3a5e");
+      const jobData = await JobController.getJobNoImg(
+        "661e2d3ccf1e78abdc2e3a5e"
+      );
 
       const checkInDay = jobData.checkInTime;
 
@@ -2350,7 +2383,7 @@ export default class JobController {
       const checkOutDay = new Date(checkInDay);
       checkOutDay.setMonth(checkOutDay.getMonth() + rentalPeriod);
       console.log("Day check out:", checkOutDay.getDate());
-      console.log("Day check out:", typeof (checkOutDay.getDate()));
+      console.log("Day check out:", typeof checkOutDay.getDate());
 
       const parsedTime = moment(checkOutDay).format("DD/MM/YYYY");
 
@@ -2358,7 +2391,7 @@ export default class JobController {
 
       checkOutDay.setDate(checkOutDay.getDate() + 3);
 
-      console.log("checkout + 3: ", checkOutDay)
+      console.log("checkout + 3: ", checkOutDay);
       console.log("checkout + 3: ", new Date(checkOutDay));
       console.log(new Date());
 
@@ -2368,27 +2401,24 @@ export default class JobController {
       //   "Test1",
       //   {idOrder: 5}
       // );
-      await global.agendaInstance.agenda.schedule(
-        new Date(),
-        "Test1",
-        { idOrder: 9 }
-      );
-
+      await global.agendaInstance.agenda.schedule(new Date(), "Test1", {
+        idOrder: 9,
+      });
 
       const resData = "hihih";
 
-      return HttpResponse.returnSuccessResponse(res, resData); ''
+      return HttpResponse.returnSuccessResponse(res, resData);
+      "";
     } catch (e) {
       console.log({ e });
       next(e);
     }
   }
 
-
   static async remindUserRenewContract(
     req: Request,
     res: Response,
-    next: NextFunction,
+    next: NextFunction
   ): Promise<any> {
     try {
       const {
@@ -2412,16 +2442,18 @@ export default class JobController {
 
       const listJobAbleExpire = await jobModel.find({
         checkInTime: {
-          $lte: dayCancelDeposited
-        }
+          $lte: dayCancelDeposited,
+        },
       });
       const listJobAbleExpireLength: number = listJobAbleExpire.length;
       if (listJobAbleExpireLength !== 0) {
         let listJobExpireBeforeMon = [];
         for (let i = 0; i < listJobAbleExpireLength; i++) {
           const checkInTime = listJobAbleExpire[i].checkInTime;
-          console.log("tiiii", (checkInTime));
-          checkInTime.setMonth(checkInTime.getMonth() + listJobAbleExpire[i].rentalPeriod - 1);
+          console.log("tiiii", checkInTime);
+          checkInTime.setMonth(
+            checkInTime.getMonth() + listJobAbleExpire[i].rentalPeriod - 1
+          );
 
           console.log("iii", checkInTime);
 
@@ -2429,7 +2461,8 @@ export default class JobController {
           if (checkInTime <= currentDay) {
             const idRoomInJob = listJobAbleExpire[i].room;
 
-            const roomInforOfJob = await roomModel.findOne({ _id: idRoomInJob })
+            const roomInforOfJob = await roomModel
+              .findOne({ _id: idRoomInJob })
               .lean()
               .exec();
 
@@ -2444,24 +2477,30 @@ export default class JobController {
 
         const listJobExpireBeforeMonLength = listJobExpireBeforeMon.length;
         for (let i = 0; i < listJobExpireBeforeMonLength; i++) {
-          if (listJobExpireBeforeMon[i].room && listJobExpireBeforeMon[i].user) {
+          if (
+            listJobExpireBeforeMon[i].room &&
+            listJobExpireBeforeMon[i].user
+          ) {
             //Gửi mail nhắc nhở
-            const userInfor = await userModel.findOne({ _id: listJobExpireBeforeMon[i].user })
+            const userInfor = await userModel
+              .findOne({ _id: listJobExpireBeforeMon[i].user })
               .lean()
               .exec();
 
-            const jobData = await JobController.getJobNoImg(listJobExpireBeforeMon[i]._id);
+            const jobData = await JobController.getJobNoImg(
+              listJobExpireBeforeMon[i]._id
+            );
 
             console.log("jobData", jobData);
 
             if (userInfor.email) {
               //send mail
               const transporter = nodemailer.createTransport({
-                service: 'gmail',
+                service: "gmail",
                 auth: {
-                  user: 'cr7ronadol12345@gmail.com',
-                  pass: 'wley oiaw yhpl oupy'
-                }
+                  user: "cr7ronadol12345@gmail.com",
+                  pass: "wley oiaw yhpl oupy",
+                },
               });
 
               // const files = ['a.txt', 'b.pdf', 'c.png'];
@@ -2474,7 +2513,7 @@ export default class JobController {
               // checkOutDay.toISOString().split('T')[0]
 
               const mailOptions = {
-                from: 'cr7ronadol12345@gmail.com',
+                from: "cr7ronadol12345@gmail.com",
                 // to: 'quyetthangmarvel@gmail.com',
                 to: userInfor.email,
                 subject: `[${jobData.room.name}] THÔNG BÁO GIA HẠN HỢP ĐỒNG TRỌ`,
@@ -2486,23 +2525,28 @@ export default class JobController {
               };
 
               // Gửi email
-              transporter.sendMail(mailOptions, function (error, info) {
+              transporter.sendMail(mailOptions, function(error, info) {
                 if (error) {
                   console.error(error);
                 } else {
-                  console.log('Email đã được gửi: ' + info.response);
+                  console.log("Email đã được gửi: " + info.response);
                 }
               });
 
               console.log(`Gửi tới mail: ${userInfor.email}`);
             } else {
-              console.log(`User id: ${listJobExpireBeforeMon[i].user} không được tìm thấy hoặc chưa cập nhật email`);
+              console.log(
+                `User id: ${listJobExpireBeforeMon[i].user} không được tìm thấy hoặc chưa cập nhật email`
+              );
             }
 
             // Đổi trạng thái phòng thành: soonExpireContract
-            await roomModel.findOneAndUpdate({ _id: listJobExpireBeforeMon[i].room }, {
-              status: 'soonExpireContract',
-            })
+            await roomModel.findOneAndUpdate(
+              { _id: listJobExpireBeforeMon[i].room },
+              {
+                status: "soonExpireContract",
+              }
+            );
 
             // Cập nhật lại  room, floor số lượng: thêm trường => cần xem xét
 
@@ -2548,7 +2592,6 @@ export default class JobController {
             // await motelRoomModel
             //   .findOneAndUpdate({ _id: motelRoomData._id }, updateData)
             //   .exec();
-
           } else {
             console.log("Job không chứa room hoặc user");
           }
@@ -2565,7 +2608,7 @@ export default class JobController {
   static async autoSetAvailableRoom(
     req: Request,
     res: Response,
-    next: NextFunction,
+    next: NextFunction
   ): Promise<any> {
     try {
       const {
@@ -2582,14 +2625,14 @@ export default class JobController {
 
       const currentDay = new Date();
       const tempDay = new Date();
-      const currentDayString = tempDay.toISOString().split('T')[0];
+      const currentDayString = tempDay.toISOString().split("T")[0];
       console.log({ currentDayString });
-      console.log("type currentDayString", typeof (currentDayString));
+      console.log("type currentDayString", typeof currentDayString);
 
       const listJobAbleExpire = await jobModel.find({
         checkInTime: {
-          $lte: dayExpireContract
-        }
+          $lte: dayExpireContract,
+        },
       });
       const listJobAbleExpireLength: number = listJobAbleExpire.length;
       if (listJobAbleExpireLength !== 0) {
@@ -2599,7 +2642,9 @@ export default class JobController {
 
           const checkOutTime = new Date(checkInTimeExpire);
 
-          checkOutTime.setMonth(checkOutTime.getMonth() + listJobAbleExpire[i].rentalPeriod); // thành checkout time
+          checkOutTime.setMonth(
+            checkOutTime.getMonth() + listJobAbleExpire[i].rentalPeriod
+          ); // thành checkout time
 
           // const checkOutTimeString = checkOutTime.toISOString().split('T')[0];
 
@@ -2609,7 +2654,7 @@ export default class JobController {
           console.log({ checkOutTime });
 
           if (checkOutTime <= currentDay) {
-            console.log("xxxxxxxxxx")
+            console.log("xxxxxxxxxx");
             listJobExpire.push(listJobAbleExpire[i]);
           }
         }
@@ -2620,18 +2665,23 @@ export default class JobController {
         for (let i = 0; i < listJobExpireLength; i++) {
           if (listJobExpire[i].room && listJobExpire[i].user) {
             //Gửi mail thông báo
-            const userInfor = await userModel.findOne({ _id: listJobExpire[i].user })
+            const userInfor = await userModel
+              .findOne({ _id: listJobExpire[i].user })
               .lean()
               .exec();
             if (userInfor.email) {
               //gửi mail thông báo hết hạn thuê phòng
               console.log(`Gửi tới mail: ${userInfor.email}`);
             } else {
-              console.log(`User id: ${listJobExpire[i].user} không được tìm thấy hoặc chưa cập nhật email`);
+              console.log(
+                `User id: ${listJobExpire[i].user} không được tìm thấy hoặc chưa cập nhật email`
+              );
             }
 
             //xóa job
-            const jobData = await JobController.getJobNoImg(listJobExpire[i]._id);
+            const jobData = await JobController.getJobNoImg(
+              listJobExpire[i]._id
+            );
 
             let resData = await jobModel
               .remove({ _id: listJobExpire[i]._id })
@@ -2643,16 +2693,21 @@ export default class JobController {
 
             //Cập nhật trạng thái phòng, xóa người thuê
 
-            const roomInfor = await roomModel.findOne({ _id: listJobExpire[i].room })
+            const roomInfor = await roomModel
+              .findOne({ _id: listJobExpire[i].room })
               .lean()
-              .exec()
+              .exec();
             const userId = roomInfor.rentedBy;
 
-            await roomModel.findOneAndUpdate({ _id: listJobExpire[i].room }, {
-              status: "available",
-              $unset: { rentedBy: 1 },
-            })
-              .exec()
+            await roomModel
+              .findOneAndUpdate(
+                { _id: listJobExpire[i].room },
+                {
+                  status: "available",
+                  $unset: { rentedBy: 1 },
+                }
+              )
+              .exec();
 
             //cập nhật lại floor
             let floorData = await floorModel
@@ -2671,7 +2726,9 @@ export default class JobController {
                   availableRoom: roomGroup["available"]
                     ? roomGroup["available"].length
                     : 0,
-                  rentedRoom: roomGroup["rented"] ? roomGroup["rented"].length : 0,
+                  rentedRoom: roomGroup["rented"]
+                    ? roomGroup["rented"].length
+                    : 0,
                   depositedRoom: roomGroup["deposited"]
                     ? roomGroup["deposited"].length
                     : 0,
@@ -2688,9 +2745,15 @@ export default class JobController {
               .exec();
 
             let updateData = {
-              availableRoom: lodash.sumBy(motelRoomData.floors, "availableRoom"),
+              availableRoom: lodash.sumBy(
+                motelRoomData.floors,
+                "availableRoom"
+              ),
               rentedRoom: lodash.sumBy(motelRoomData.floors, "rentedRoom"),
-              depositedRoom: lodash.sumBy(motelRoomData.floors, "depositedRoom"),
+              depositedRoom: lodash.sumBy(
+                motelRoomData.floors,
+                "depositedRoom"
+              ),
             };
 
             await motelRoomModel
@@ -2707,7 +2770,6 @@ export default class JobController {
             await userModel
               .findOneAndUpdate({ _id: userId }, userUpdateData, { new: true })
               .exec();
-
           } else {
             console.log("Job không chứa room hoặc user");
           }
@@ -2723,7 +2785,7 @@ export default class JobController {
   static async sendMailRemindMonthlyPayment(
     req: Request,
     res: Response,
-    next: NextFunction,
+    next: NextFunction
   ): Promise<any> {
     try {
       const {
@@ -2742,7 +2804,7 @@ export default class JobController {
 
       const listJobMonthlyPayment = await jobModel.find({
         isDeleted: false,
-        status: "pendingMonthlyPayment"
+        status: "pendingMonthlyPayment",
         // checkInTime: {
         //   $lte : dayExpireContract
         // }
@@ -2755,21 +2817,22 @@ export default class JobController {
 
       for (let i = 0; i < listJobMonthlyPaymentLength; i++) {
         if (listJobMonthlyPayment[i].user && listJobMonthlyPayment[i].room) {
-          const userInfor = await userModel.findOne({ _id: listJobMonthlyPayment[i].user })
+          const userInfor = await userModel
+            .findOne({ _id: listJobMonthlyPayment[i].user })
             .lean()
             .exec();
-          const roomInfor = await roomModel.findOne({ _id: listJobMonthlyPayment[i].room })
+          const roomInfor = await roomModel
+            .findOne({ _id: listJobMonthlyPayment[i].room })
             .lean()
             .exec();
 
           if (userInfor.email && roomInfor.name) {
-
             const transporter = nodemailer.createTransport({
-              service: 'gmail',
+              service: "gmail",
               auth: {
-                user: 'cr7ronadol12345@gmail.com',
-                pass: 'wley oiaw yhpl oupy'
-              }
+                user: "cr7ronadol12345@gmail.com",
+                pass: "wley oiaw yhpl oupy",
+              },
             });
 
             const nowDay = new Date();
@@ -2812,7 +2875,6 @@ export default class JobController {
     }
   }
 
-
   static async deleteJobByIdRoom(
     req: Request,
     res: Response,
@@ -2831,9 +2893,10 @@ export default class JobController {
         order: orderModel,
       } = global.mongoModel;
 
-      const roomInfor = await roomModel.findOne({ _id: idRoom })
+      const roomInfor = await roomModel
+        .findOne({ _id: idRoom })
         .lean()
-        .exec()
+        .exec();
       console.log("roomInfor", roomInfor);
       const idUserRented = roomInfor.rentedBy;
 
@@ -2859,6 +2922,7 @@ export default class JobController {
           title: "Xác nhận hủy cọc",
           content: "Bạn đã hủy cọc phòng thành công",
           user: idUserRented,
+          isRead: false,
         });
 
         console.log("jobInfor xbaab: ", jobInfor);
@@ -2866,7 +2930,6 @@ export default class JobController {
           .findOneAndUpdate({ _id: jobInfor._id }, { isDeleted: true })
           .lean()
           .exec();
-
 
         // let resData = await jobModel
         //   .remove({ _id: jobInfor._id })
@@ -2926,7 +2989,10 @@ export default class JobController {
           availableRoom: lodash.sumBy(motelRoomData.floors, "availableRoom"),
           rentedRoom: lodash.sumBy(motelRoomData.floors, "rentedRoom"),
           depositedRoom: lodash.sumBy(motelRoomData.floors, "depositedRoom"),
-          soonExpireContractRoom: lodash.sumBy(motelRoomData.floors, "soonExpireContractRoom"),
+          soonExpireContractRoom: lodash.sumBy(
+            motelRoomData.floors,
+            "soonExpireContractRoom"
+          ),
         };
 
         await motelRoomModel
@@ -2948,17 +3014,14 @@ export default class JobController {
         userUpdateData["$unset"] = { room: 1, currentJob: 1 };
 
         await userModel
-          .findOneAndUpdate({ _id: idUserRented }, userUpdateData, { new: true })
+          .findOneAndUpdate({ _id: idUserRented }, userUpdateData, {
+            new: true,
+          })
           .exec();
-
       } else {
-        const badData = 'Room have not rented'
-        return HttpResponse.returnBadRequestResponse(
-          res,
-          badData
-        );
+        const badData = "Room have not rented";
+        return HttpResponse.returnBadRequestResponse(res, badData);
       }
-
 
       const resData = "Change status room success";
       return HttpResponse.returnSuccessResponse(res, resData);
@@ -2985,15 +3048,16 @@ export default class JobController {
         order: orderModel,
       } = global.mongoModel;
 
-      const roomInfor = await roomModel.findOne({ _id: idRoom })
+      const roomInfor = await roomModel
+        .findOne({ _id: idRoom })
         .lean()
-        .exec()
+        .exec();
       console.log("roomInfor", roomInfor);
       const idUserRented = roomInfor.rentedBy;
 
       const jobInfor = await jobModel.findOne({
         room: idRoom,
-        user: idUserRented
+        user: idUserRented,
       });
 
       console.log({ jobInfor });
@@ -3014,9 +3078,13 @@ export default class JobController {
           title: "Xác nhận hủy cọc",
           content: "Bạn đã hủy cọc phòng thành công",
           user: idUserRented,
+          isRead: false,
         });
 
-        let resData = await jobModel.findOneAndUpdate({ _id: jobInfor._id }, { isDeleted: true });
+        let resData = await jobModel.findOneAndUpdate(
+          { _id: jobInfor._id },
+          { isDeleted: true }
+        );
 
         // let resData = await jobModel
         //   .remove({ _id: jobInfor._id })
@@ -3090,17 +3158,14 @@ export default class JobController {
         userUpdateData["$unset"] = { room: 1, currentJob: 1 };
 
         await userModel
-          .findOneAndUpdate({ _id: idUserRented }, userUpdateData, { new: true })
+          .findOneAndUpdate({ _id: idUserRented }, userUpdateData, {
+            new: true,
+          })
           .exec();
-
       } else {
-        const badData = 'Room have not rented'
-        return HttpResponse.returnBadRequestResponse(
-          res,
-          badData
-        );
+        const badData = "Room have not rented";
+        return HttpResponse.returnBadRequestResponse(res, badData);
       }
-
 
       const resData = "Change status room success";
       return HttpResponse.returnSuccessResponse(res, resData);
@@ -3108,8 +3173,6 @@ export default class JobController {
       next(e);
     }
   }
-
-
 
   /* -------------------------------------------------------------------------- */
   /*                            START HELPER FUNCTION                           */
@@ -3180,16 +3243,11 @@ export default class JobController {
       user: userModel,
     } = global.mongoModel;
 
-
-
     let resData = await jobModel
       .findOne({ _id: jobId, ...condition })
       .populate("room orders order images currentOrder")
       .lean()
       .exec();
-
-
-
 
     if (!resData) {
       return HttpResponse.returnErrorWithMessage("job.not.exist");
@@ -3213,13 +3271,10 @@ export default class JobController {
       .lean()
       .exec();
 
-
-
     const motelRoomData = await motelRoomModel
       .findOne({ floors: floorData._id })
       .lean()
       .exec();
-
 
     resData["motelRoom"] = motelRoomData;
 
@@ -3227,8 +3282,6 @@ export default class JobController {
 
     return resData;
   }
-
-
 
   // Update job by id
   static async updateJob(jobId: any, data: any): Promise<any> {
@@ -3416,7 +3469,7 @@ function parseDate(input, format) {
     i = 0,
     fmt = {};
   // extract date-part indexes from the format
-  format.replace(/(yyyy|dd|mm)/g, function (part) {
+  format.replace(/(yyyy|dd|mm)/g, function(part) {
     fmt[part] = i++;
   });
 
