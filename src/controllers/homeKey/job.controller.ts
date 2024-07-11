@@ -2188,7 +2188,8 @@ export default class JobController {
               nextRunAt: { $ne: null },
             });
 
-            if (jobs.length > 0) {
+            if(jobs.length > 0) {
+              // task check chưa chạy
               const job = jobs[0];
               job.schedule(
                 moment()
@@ -2196,6 +2197,13 @@ export default class JobController {
                   .toDate()
               );
               await job.save();
+            } else {
+              // task check đã chạy, tạo job mới
+              await global.agendaInstance.agenda.schedule(
+                moment().add(2, "minutes").toDate(),
+                "RemindUserRenewContractAndChangeStatusRoomBeforeOneMonth",
+                { jobId: dataJob._id }
+              );
             }
 
             const resData = "Gia hạn hợp đồng thành công!";
