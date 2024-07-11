@@ -579,7 +579,7 @@ export default (agenda) => {
             const mailOptions = {
               from: "cr7ronadol12345@gmail.com",
               // to: 'quyetthangmarvel@gmail.com',
-              to: ownerData.email,
+              to: "cr7ronadol12345@gmail.com", // thay bằng mail admin
               subject: `[${motelData.name}] - [${roomData.name}] NHẮC NHỞ DUYỆT THANH TOÁN CỌC`,
               text: `Vui lòng duyệt giao dịch cọc mã ${transactionData.keyPayment} cho phòng ${roomData.name}, tòa ${motelData.name}. Nếu minh chứng chuyển tiền là sai, vui lòng liên hệ admin để xử lý!`,
             };
@@ -786,6 +786,8 @@ export default (agenda) => {
             "RemindUserMonthly15EveryDay_ExpireNextMonth", //done
             { orderId: job.attrs.data.orderId }
           );
+
+          done();
         } else if (moment().year() === checkOutTime.year()) {
           if (moment().month() < checkOutTime.month()) {
             //Nhắc nhở đóng tiền liên tục 15 ngày đầu
@@ -796,6 +798,8 @@ export default (agenda) => {
               "RemindUserMonthly15EveryDay_ExpireNextMonth", //done
               { orderId: job.attrs.data.orderId }
             );
+
+            done();
           } else if (moment().month() === checkOutTime.month()) {
             if (checkOutTime.date() <= 2) {
               await global.agendaInstance.agenda.schedule(
@@ -805,6 +809,8 @@ export default (agenda) => {
                 "RemindUserMonthlyToExpirePlus2Day_Expire1Or2ThisMonth",
                 { orderId: job.attrs.data.orderId }
               );
+
+              done();
             } else if (checkOutTime.date() <= 15) {
               await global.agendaInstance.agenda.schedule(
                 moment()
@@ -813,6 +819,8 @@ export default (agenda) => {
                 "RemindUserMonthlyToExpireDay_ExpireThisMonth", //done
                 { orderId: job.attrs.data.orderId }
               );
+
+              done();
             } else {
               await global.agendaInstance.agenda.schedule(
                 moment()
@@ -821,6 +829,8 @@ export default (agenda) => {
                 "RemindUserMonthlyToDay15_ExpireThisMonth", //done
                 { orderId: job.attrs.data.orderId }
               );
+
+              done();
             }
           } else {
             //check in vào đầu tháng, sẽ hết hạn vào ngày cuối cùng của tháng
@@ -831,9 +841,12 @@ export default (agenda) => {
               "RemindUserMonthlyToDay3_ExpireEndOfLastMonth",
               { orderId: job.attrs.data.orderId }
             );
+
+            done();
           }
         } else {
-          //check in vào đầu tháng, sẽ hết hạn vào ngày cuối cùng của tháng
+          //check in vào đầu tháng, sẽ hết hạn vào ngày cuối cùng của tháng\
+          //CHECKED
           await global.agendaInstance.agenda.schedule(
             moment()
               .add("2", "minutes")
@@ -841,6 +854,8 @@ export default (agenda) => {
             "RemindUserMonthlyToDay3_ExpireEndOfLastMonth",
             { orderId: job.attrs.data.orderId }
           );
+
+          done();
         }
       }
       done();
@@ -1270,6 +1285,7 @@ export default (agenda) => {
               { _id: orderData._id },
               {
                 expireTime: checkOutTime
+                  .clone()
                   .date(4)
                   .endOf("day")
                   .toDate(),
@@ -1320,6 +1336,8 @@ export default (agenda) => {
 
                   // console.log(`Gửi tới mail: ${userData.email}`);
                 } else {
+                  console.log("VÀO ĐÂY HẢ 1");
+                  console.log(moment());
                   await global.agendaInstance.agenda.schedule(
                     moment()
                       .add(1, "days")
@@ -1328,8 +1346,13 @@ export default (agenda) => {
                     "RemindUserMonthlyToExpirePlus2Day_Expire1Or2ThisMonth",
                     { orderId: job.attrs.data.orderId }
                   );
+
+                  done();
                 }
               }
+
+              console.log("VÀO ĐÂY HẢ 2");
+              console.log(moment());
               await global.agendaInstance.agenda.schedule(
                 moment()
                   .add(1, "days")
@@ -1338,6 +1361,8 @@ export default (agenda) => {
                 "RemindUserMonthlyToExpirePlus2Day_Expire1Or2ThisMonth",
                 { orderId: job.attrs.data.orderId }
               );
+
+              done();
             } else {
               const payDeposit = await payDepositListModel.create({
                 room: jobData.room,
@@ -1582,6 +1607,7 @@ export default (agenda) => {
           } else {
             //NOTE: thêm job thanh toán những ngày còn lại
             if (moment().date() <= checkOutTime.date()) {
+              console.log("TRƯỜNG HỢP 1");
               await global.agendaInstance.agenda.schedule(
                 checkOutTime
                   .add(1, "days")
@@ -1590,7 +1616,9 @@ export default (agenda) => {
                 "CreateOrderForRestDayInMonExpireContract_At1Or2Day",
                 { jobId: jobData._id }
               );
+              done();
             } else {
+              console.log("TRƯỜNG HỢP 2");
               await global.agendaInstance.agenda.schedule(
                 moment()
                   .add(2, "hours")
@@ -1598,6 +1626,7 @@ export default (agenda) => {
                 "CreateOrderForRestDayInMonExpireContract_At1Or2Day",
                 { jobId: jobData._id }
               );
+              done();
             }
           }
         }
@@ -1632,13 +1661,25 @@ export default (agenda) => {
             const checkOutDay = moment(checkInDay)
               .add(rentalPeriod, "months")
               .subtract(1, "days"); //  chính xác ngày ở cuối
+            // console.log("BỘ BỘ: checkOutDay", checkOutDay)
 
-            const startTime = checkOutDay.startOf("months").startOf("day");
+            const startTime = checkOutDay
+              .clone()
+              .startOf("months")
+              .startOf("day");
+            // console.log("BỘ BỘ: startTime", startTime)
+            // console.log("BỘ BỘ: checkOutDay", checkOutDay)
             const start = startTime.format("YYYY-MM-DD");
-            const endTime = checkOutDay.endOf("day");
-            const end = endTime.format("YYYY-MM-DD");
+            const endTime = checkOutDay.clone().endOf("day");
+            // console.log("BỘ BỘ: endTime", endTime)
+            const end = endTime.clone().format("YYYY-MM-DD");
+            // console.log("BỘ BỘ: checkOutDay", checkOutDay)
 
-            const expireTime = endTime.date(6).endOf("day");
+            const expireTime = endTime
+              .clone()
+              .date(6)
+              .endOf("day");
+            // console.log("BỘ BỘ: expireTime", expireTime)
 
             // let electricNumber = await EnergyController.countElectricV2(job.attrs.data.jobId, start, end);
             const roomId = resData.room;
@@ -1668,9 +1709,15 @@ export default (agenda) => {
             const electricPrice = electricNumber * electricityPricePerKwh;
 
             const dayOfMon = moment(checkOutDay).daysInMonth(); // số ngày của tháng
+
+            // note: checkOutDay.clone().subtract(1, 'days'): vì nếu lấy ngày hiện tại thì thiếu 1 giây, bị làm tròn xuống số ngày
             const numberDayStay =
-              Math.abs(checkOutDay.diff(checkOutDay.startOf("month"), "days")) +
-              1; //cộng 1: tính cả ngày checkIn
+              Math.abs(
+                checkOutDay
+                  .clone()
+                  .endOf("days")
+                  .diff(checkOutDay.clone().startOf("month"), "days")
+              ) + 1; //cộng 1: tính cả ngày checkIn
             const waterPrice =
               ((roomData.waterPrice * roomData.person) / dayOfMon) *
               numberDayStay;
@@ -1687,6 +1734,8 @@ export default (agenda) => {
               waterPrice +
               electricPrice;
 
+            // console.log("BỘ BỘ: hihi", (checkOutDay.clone().startOf("month")));
+            // console.log("BỘ BỘ: endTime", endTime)
             const orderData = await orderModel.create({
               user: resData.user,
               job: resData._id,
@@ -1759,6 +1808,17 @@ export default (agenda) => {
         let orderData = await orderModel.findOne(job.attrs.data.orderId);
 
         if (orderData) {
+          if (moment(orderData.expireTime).date() !== 6) {
+            await orderModel.findOneAndUpdate(
+              { _id: orderData._id },
+              {
+                expireTime: moment(orderData.expireTime)
+                  .date(6)
+                  .endOf("day")
+                  .toDate(),
+              }
+            );
+          }
           const jobId = orderData.job;
           const userId = orderData.user._id;
           const jobData = await JobController.getJobNoImg(jobId);
@@ -1775,15 +1835,6 @@ export default (agenda) => {
               .subtract(1, "days"); //  chính xác ngày ở cuối cùng
 
             if (moment().date() <= 6) {
-              await global.agendaInstance.agenda.schedule(
-                moment()
-                  .add("1", "days")
-                  .startOf("days")
-                  .toDate(),
-                "CheckOrderStatusForContractExpireIn1Or2Day_In2AfterDayExpireContract",
-                { orderId: orderData._id }
-              );
-
               //gửi lần cuối vào đầu ngày cuối (lấy hiện tại trừ thời gian hết hạn)
               if (userData) {
                 if (userData.email) {
@@ -1822,8 +1873,33 @@ export default (agenda) => {
                   });
 
                   // console.log(`Gửi tới mail: ${userData.email}`);
+                } else {
+                  console.log("Ở ĐÂYYY 1");
+                  await global.agendaInstance.agenda.schedule(
+                    moment()
+                      .add("1", "days")
+                      .startOf("days")
+                      .toDate(),
+                    "CheckOrderStatusForContractExpireIn1Or2Day_In2AfterDayExpireContract",
+                    { orderId: orderData._id }
+                  );
+                  done();
+                  return;
                 }
               }
+
+              console.log("Ở ĐÂYYY 2");
+              await global.agendaInstance.agenda.schedule(
+                moment()
+                  .add("1", "days")
+                  .startOf("days")
+                  .toDate(),
+                "CheckOrderStatusForContractExpireIn1Or2Day_In2AfterDayExpireContract",
+                { orderId: orderData._id }
+              );
+
+              done();
+              return;
             } else {
               const jobDataAfterUpdate = await jobModel.findOneAndUpdate(
                 { orders: orderData._id },
@@ -2458,7 +2534,12 @@ export default (agenda) => {
             if (moment(orderData.expireTime).date() !== checkOutDay.date()) {
               await orderModel.findOneAndUpdate(
                 { _id: orderData._id },
-                { expireTime: checkOutDay.endOf("day").toDate() }
+                {
+                  expireTime: checkOutDay
+                    .clone()
+                    .endOf("day")
+                    .toDate(),
+                }
               );
             }
 
@@ -2506,20 +2587,26 @@ export default (agenda) => {
                   await global.agendaInstance.agenda.schedule(
                     moment()
                       .add(1, "days")
+                      .startOf("days")
                       .toDate(),
                     "RemindUserMonthlyToExpireDay_ExpireThisMonth",
                     { orderId: job.attrs.data.orderId }
                   );
                 }
+
+                done();
               }
 
               await global.agendaInstance.agenda.schedule(
                 moment()
                   .add(1, "days")
+                  .startOf("days")
                   .toDate(),
                 "RemindUserMonthlyToExpireDay_ExpireThisMonth",
                 { orderId: job.attrs.data.orderId }
               );
+
+              done();
             } else {
               const payDeposit = await payDepositListModel.create({
                 room: jobData.room,
@@ -2776,12 +2863,16 @@ export default (agenda) => {
             //ngày hết hạn, cần tạo task tạo order này cách thời gian kiểm tra ra (2 tiếng)
             await global.agendaInstance.agenda.schedule(
               checkOutDay
+                .clone()
                 .add(1, "days")
                 .add(2, "hours")
                 .toDate(),
               "CreateOrderForRestDayInMonBeforeExpireContract",
               { jobId: jobId }
             );
+
+            done();
+            return;
           }
         }
       } catch (err) {
@@ -3162,6 +3253,7 @@ export default (agenda) => {
                 "CreateOrderForNextMonth",
                 { jobId: jobId }
               );
+              done();
             } else if (checkOutDay.year() === moment().year()) {
               if (checkOutDay.month() > moment().month()) {
                 // ĐÃ GIAN HẠN
@@ -3177,25 +3269,33 @@ export default (agenda) => {
                 //TH1: khách còn thời gian để gia hạn
                 //note: checking
                 if (checkOutDay.date() - moment().date() >= 15) {
+                  console.log("BỊ NHẢY VÀO ĐÂY 1");
                   const resDayExpire =
                     checkOutDay.date() - moment().date() - 15;
                   await global.agendaInstance.agenda.schedule(
                     moment()
-                      .add(resDayExpire + 1, "days") //kiểm tra vào ngày đã hết hạn gia hạn tính tới thời điểm hiện tại
+                      .add(resDayExpire + 1, "days")
+                      .startOf("days") //kiểm tra vào ngày đã hết hạn gia hạn tính tới thời điểm hiện tại
                       .toDate(),
                     "PendingCheckDayExpireContract",
                     { jobId: jobId }
                   );
+                  done();
                 } else {
                   //TH2: khách đã hết thời gian để gia hạn
                   //checked
+                  console.log("BỊ NHẢY VÀO ĐÂY 2");
                   await global.agendaInstance.agenda.schedule(
-                    moment()
-                      .add("2", "minutes")
-                      .toDate(), //note: 5
+                    checkOutDay.endOf("days").toDate(), //note: 5
                     "CreateOrderForRestDayInMonBeforeExpireContract",
                     { jobId: jobId }
                   );
+                  // await global.agendaInstance.agenda.schedule(
+                  //   moment().add("2", 'minutes').toDate(), //note: 5
+                  //   "CreateOrderForRestDayInMonBeforeExpireContract",
+                  //   { jobId: jobId }
+                  // );
+                  done();
                 }
               } else {
                 //Không thể xảy ra
@@ -3236,12 +3336,16 @@ export default (agenda) => {
               .add(rentalPeriod, "months")
               .subtract(1, "days"); //  chính xác ngày ở cuối
 
-            const startTime = checkOutDay.startOf("months").startOf("day");
-            const start = startTime.format("YYYY-MM-DD");
-            const endTime = checkOutDay.endOf("day");
-            const end = endTime.format("YYYY-MM-DD");
+            console.log("HHHHH: checkOutDay", checkOutDay);
 
-            const expireTime = endTime.add(15, "days");
+            const startTime = checkOutDay.clone().startOf("months");
+            console.log("HHHHH: startTime", startTime);
+            const start = startTime.clone().format("YYYY-MM-DD");
+            const endTime = checkOutDay.clone().endOf("day");
+            console.log("HHHHH: endTime", endTime);
+            const end = endTime.clone().format("YYYY-MM-DD");
+
+            const expireTime = endTime.clone().add(15, "days");
 
             // let electricNumber = await EnergyController.countElectricV2(job.attrs.data.jobId, start, end);
             const roomId = resData.room;
@@ -3272,8 +3376,7 @@ export default (agenda) => {
 
             const dayOfMon = moment(checkOutDay).daysInMonth(); // số ngày của tháng
             const numberDayStay =
-              Math.abs(checkOutDay.diff(checkOutDay.startOf("month"), "days")) +
-              1; //cộng 1: tính cả ngày checkIn
+              Math.abs(endTime.clone().diff(startTime.clone(), "days")) + 1; //cộng 1: tính cả ngày checkIn
             const waterPrice =
               ((roomData.waterPrice * roomData.person) / dayOfMon) *
               numberDayStay;
@@ -3289,6 +3392,8 @@ export default (agenda) => {
               servicePrice +
               waterPrice +
               electricPrice;
+
+            console.log("HHHHH: GGG", endTime);
 
             const orderData = await orderModel.create({
               user: resData.user,
@@ -3333,6 +3438,9 @@ export default (agenda) => {
               "CheckOrderStatus_In3LastDayExpireContract",
               { orderId: orderData._id }
             );
+
+            done();
+            return;
           }
         }
         done();
@@ -3373,24 +3481,37 @@ export default (agenda) => {
 
             const checkInDay = jobData.checkInTime;
             const rentalPeriod = jobData.rentalPeriod;
+
             const checkOutDay = moment(checkInDay)
               .add(rentalPeriod, "months")
               .subtract(1, "days"); //  chính xác ngày ở cuối cùng
-            const checkOutDayPlus3 = checkOutDay.add(3, "days"); // số ngày để đóng hóa đơn cuối (3 ngày: ngày hiện tại + 2 ngày)
+            console.log("NGÀY HẾT HẠN checkOutDay: ", checkOutDay);
+            const checkOutDayPlus3 = checkOutDay.clone().add(3, "days"); // số ngày để đóng hóa đơn cuối (3 ngày: ngày hiện tại + 2 ngày)
+            console.log("NGÀY HẾT HẠN: ", checkOutDayPlus3);
 
             if (
               moment(orderData.expireTime).date() !== checkOutDayPlus3.date()
             ) {
               await orderModel.findOneAndUpdate(
                 { _id: orderData._id },
-                { expireTime: checkOutDayPlus3.endOf("day").toDate() }
+                {
+                  expireTime: checkOutDayPlus3
+                    .clone()
+                    .endOf("day")
+                    .toDate(),
+                }
               );
             }
 
-            if (moment().diff(checkOutDayPlus3) <= 0) {
+            if (
+              moment()
+                .startOf("days")
+                .diff(checkOutDayPlus3.clone().startOf("days")) <= 0
+            ) {
               await global.agendaInstance.agenda.schedule(
                 moment()
                   .add("1", "days")
+                  .startOf("days")
                   .toDate(),
                 "CheckOrderStatus_In3LastDayExpireContract",
                 { orderId: orderData._id }
@@ -3439,6 +3560,7 @@ export default (agenda) => {
                   await global.agendaInstance.agenda.schedule(
                     moment()
                       .add("1", "days")
+                      .startOf("days")
                       .toDate(),
                     "CheckOrderStatus_In3LastDayExpireContract",
                     { orderId: orderData._id }
@@ -3734,6 +3856,185 @@ export default (agenda) => {
     }
   });
 
+  //Gọi lúc kích hoạt xong, lúc user gia hạn hợp đồng xong
+  agenda.define(
+    "RemindUserRenewContractAndChangeStatusRoomBeforeOneMonth",
+    async (job, done) => {
+      try {
+        const {
+          user: userModel,
+          order: orderModel,
+          job: jobModel,
+          room: roomModel,
+          totalKwh: totalKwhModel,
+          floor: floorModel,
+          motelRoom: motelRoomModel,
+        } = global.mongoModel;
+
+        let data = job.attrs.data;
+        let resData = await JobController.getJobNoImg(job.attrs.data.jobId);
+
+        if (resData) {
+          const checkInDay = resData.checkInTime;
+          const rentalPeriod = resData.rentalPeriod;
+          const checkOutDay = moment(checkInDay)
+            .add(rentalPeriod, "months")
+            .subtract(1, "days"); //  chính xác ngày ở cuối
+          // console.log("RemindUserRenewContractAndChangeStatusRoomBeforeOneMonth checkOutDay", checkOutDay);
+          // console.log("RemindUserRenewContractAndChangeStatusRoomBeforeOneMonth moment", moment());
+          // console.log("RemindUserRenewContractAndChangeStatusRoomBeforeOneMonth sub", checkOutDay.clone().diff(moment(), "months"));
+          if (resData.isActived && !resData.isDeleted) {
+            if (checkOutDay.clone().diff(moment(), "months") < 1) {
+              const userData = await userModel
+                .findOne({
+                  _id: resData.user._id,
+                })
+                .lean()
+                .exec();
+
+              console.log({ userData });
+
+              if (userData) {
+                //Gửi mail nhắc nhở
+                if (userData.email) {
+                  console.log("email: ", userData.email);
+                  const transporter = nodemailer.createTransport({
+                    service: "gmail",
+                    auth: {
+                      user: "cr7ronadol12345@gmail.com",
+                      pass: "wley oiaw yhpl oupy",
+                    },
+                  });
+
+                  const mailOptions = {
+                    from: "cr7ronadol12345@gmail.com",
+                    to: userData.email,
+                    subject: `[${resData.room.name}] THÔNG BÁO GIA HẠN HỢP ĐỒNG TRỌ`,
+                    text: `Phòng ${resData.room.name} thuộc dãy ${
+                      resData.motelRoom.name
+                    } của quý khách sẽ hết hợp đồng vào ${checkOutDay
+                      .clone()
+                      .format("DD-MM-YYYY")}. Vui lòng truy cập trang web: ${
+                      process.env.BASE_PATH_CLINET1
+                    } thực hiện đăng nhập rồi vào đường dẫn ${
+                      process.env.BASE_PATH_CLINET3
+                    }job-detail/${resData._id}/${
+                      resData.room._id
+                    } để gian hạn hợp đồng. Lưu ý: Hợp đồng chỉ có thể gia hạn trước thời gian hết hạn 15 ngày.`,
+                  };
+
+                  transporter.sendMail(mailOptions, function(error, info) {
+                    if (error) {
+                      console.error(error);
+                    } else {
+                      console.log("Email đã được gửi: " + info.response);
+                    }
+                  });
+
+                  console.log(`Gửi tới mail: ${userData.email}`);
+                } else {
+                  console.log(
+                    `User id: ${userData.user} không được tìm thấy hoặc chưa cập nhật email`
+                  );
+
+                  await global.agendaInstance.agenda.schedule(
+                    moment()
+                      .add(1, "days")
+                      .startOf("day")
+                      .toDate(),
+                    "RemindUserRenewContractAndChangeStatusRoomBeforeOneMonth",
+                    { jobId: resData._id }
+                  );
+                }
+              }
+
+              //thay đổi trạng thái phòng
+              {
+                await roomModel.findOneAndUpdate(
+                  { _id: resData.room },
+                  {
+                    status: "soonExpireContract",
+                  }
+                );
+
+                // cập nhật lại floor
+                let floorData = await floorModel
+                  .findOne({ rooms: resData.room._id })
+                  .populate("rooms")
+                  .lean()
+                  .exec();
+                const roomGroup = lodash.groupBy(floorData.rooms, (room) => {
+                  return room.status;
+                });
+
+                await floorModel
+                  .findOneAndUpdate(
+                    { _id: floorData._id },
+                    {
+                      availableRoom: roomGroup["available"]
+                        ? roomGroup["available"].length
+                        : 0,
+                      soonExpireContractRoom: roomGroup["soonExpireContract"]
+                        ? roomGroup["soonExpireContract"].length
+                        : 0,
+                      rentedRoom: roomGroup["rented"]
+                        ? roomGroup["rented"].length
+                        : 0,
+                      depositedRoom: roomGroup["deposited"]
+                        ? roomGroup["deposited"].length
+                        : 0,
+                    }
+                  )
+                  .exec();
+
+                let motelRoomData = await motelRoomModel
+                  .findOne({ floors: floorData._id })
+                  .populate("floors")
+                  .lean()
+                  .exec();
+
+                let updateData = {
+                  availableRoom: lodash.sumBy(
+                    motelRoomData.floors,
+                    "availableRoom"
+                  ),
+                  rentedRoom: lodash.sumBy(motelRoomData.floors, "rentedRoom"),
+                  depositedRoom: lodash.sumBy(
+                    motelRoomData.floors,
+                    "depositedRoom"
+                  ),
+                  soonExpireContractRoom: lodash.sumBy(
+                    motelRoomData.floors,
+                    "soonExpireContractRoom"
+                  ),
+                };
+
+                await motelRoomModel
+                  .findOneAndUpdate({ _id: motelRoomData._id }, updateData)
+                  .exec();
+              }
+              done();
+            } else {
+              await global.agendaInstance.agenda.schedule(
+                checkOutDay
+                  .clone()
+                  .subtract(1, "months")
+                  .startOf("day")
+                  .toDate(),
+                "RemindUserRenewContractAndChangeStatusRoomBeforeOneMonth",
+                { jobId: resData._id }
+              );
+            }
+            done();
+          }
+        }
+        done();
+      } catch (err) {
+        done();
+      }
+    }
+  );
+
   agenda.define("Test1", async (job, done) => {
     try {
       console.log("Test1");
@@ -3800,12 +4101,6 @@ export default (agenda) => {
 
   // (async function () {
   //   await agenda.start();
-
-  // cuối mỗi tháng, lúc 0h00 của ngày đầu tiên tháng tiếp theo
-  // await agenda.every('0 0 1 * *', 'AutoChangeStatusRoomExpireContract');
-
-  //đầu mỗi ngày
-  // await agenda.every('0 0 * * *', 'AutoChangeStatusRoomExpireContract');
 
   // await agenda.schedule('in 2 minutes', 'AutoChangeStatusRoom');
 

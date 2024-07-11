@@ -19,6 +19,7 @@ import { time } from "console";
 import electric from "services/agenda/jobs/electric";
 
 import { helpers } from "../../utils";
+import { UserModel } from "models/user";
 
 const width = 595;
 const height = 400;
@@ -5482,9 +5483,142 @@ export default class EnergyController {
       // const a = await helpers.getImageUrl("666012d86a765add7c01ad0e");
       // const a  = moment().startOf("months");
       // const b = moment().month();
-      const c = moment("2024-05-31T17:00:00.000+00:00");
-      const d = moment(c).date(11);
-      console.log({d});
+      
+      console.log(moment());
+
+      const a  = moment("2024-07-08T17:00:00.000+00:00");
+      console.log({a});
+
+      // {
+      //   const {
+      //     user: userModel,
+      //     order: orderModel,
+      //     job: jobModel,
+      //     room: roomModel,
+      //     totalKwh: totalKwhModel,
+      //     floor: floorModel,
+      //     motelRoom: motelRoomModel,
+      //   } = global.mongoModel;
+        
+  
+      //   // let data = job.attrs.data;
+      //   let resData = await JobController.getJobNoImg("668cb773f903ed2c40299481"); 
+  
+      //   if(resData) {
+      //     const checkInDay = resData.checkInTime;
+      //     const rentalPeriod = resData.rentalPeriod;
+      //     const checkOutDay = moment(checkInDay).add(rentalPeriod, "months").subtract(1, "days"); //  chính xác ngày ở cuối 
+  
+      //     if (resData.isActived && !(resData.isDeleted)) {
+      //       if(checkOutDay.clone().diff(moment(), "months") < 1) {
+      //         const userData = await userModel.findOne({
+      //           _id: resData.user._id
+      //         }).lean().exec();
+  
+      //         console.log({userData});
+  
+      //         if(userData) {
+      //           //Gửi mail nhắc nhở
+      //           if(userData.email) {
+      //             console.log("email: ", userData.email);
+      //             const transporter = nodemailer.createTransport({
+      //               service: 'gmail',
+      //               auth: {
+      //                   user: 'cr7ronadol12345@gmail.com',
+      //                   pass: 'wley oiaw yhpl oupy'
+      //               }
+      //             });
+  
+      //             const mailOptions = {
+      //                 from: 'cr7ronadol12345@gmail.com',
+      //                 to: userData.email,
+      //                 subject: `[${resData.room.name}] THÔNG BÁO GIA HẠN HỢP ĐỒNG TRỌ`,
+      //                 text: `Phòng ${resData.room.name} thuộc dãy ${resData.motelRoom.name} của quý khách sẽ hết hợp đồng vào ${checkOutDay.clone().format("DD-MM-YYYY")}. Vui lòng truy cập trang web: ${process.env.BASE_PATH_CLINET1} thực hiện đăng nhập rồi vào đường dẫn ${process.env.BASE_PATH_CLINET3}job-detail/${resData._id}/${resData.room._id} để gian hạn hợp đồng. Lưu ý: Hợp đồng chỉ có thể gia hạn trước thời gian hết hạn 15 ngày.`,
+      //             };
+  
+      //             transporter.sendMail(mailOptions, function (error, info) {
+      //               if (error) {
+      //                   console.error(error);
+      //               } else {
+      //                   console.log('Email đã được gửi: ' + info.response);
+      //               }
+      //             });
+                  
+      //             console.log(`Gửi tới mail: ${userData.email}`);
+      //           } else {
+      //             console.log(`User id: ${userData.user} không được tìm thấy hoặc chưa cập nhật email`);
+  
+      //             await global.agendaInstance.agenda.schedule(
+      //               moment().add(1, "days").startOf("day").toDate(),
+      //               "RemindUserRenewContractAndChangeStatusRoomBeforeOneMonth",
+      //               { jobId: resData._id }
+      //             );
+      //           }
+      //         }
+  
+      //         //thay đổi trạng thái phòng
+      //         {
+      //           await roomModel.findOneAndUpdate({_id: resData.room}, {
+      //             status: 'soonExpireContract',
+      //           })
+    
+      //           // cập nhật lại floor
+      //           let floorData = await floorModel
+      //             .findOne({ rooms: resData.room._id })
+      //             .populate("rooms")
+      //             .lean()
+      //             .exec();
+      //           const roomGroup = lodash.groupBy(floorData.rooms, (room) => {
+      //             return room.status;
+      //           });
+      
+      //           await floorModel
+      //             .findOneAndUpdate(
+      //               { _id: floorData._id },
+      //               {
+      //                 availableRoom: roomGroup["available"]
+      //                   ? roomGroup["available"].length
+      //                   : 0,
+      //                 soonExpireContractRoom: roomGroup["soonExpireContract"]
+      //                   ? roomGroup["soonExpireContract"].length
+      //                   : 0,
+      //                 rentedRoom: roomGroup["rented"] ? roomGroup["rented"].length : 0,
+      //                 depositedRoom: roomGroup["deposited"]
+      //                   ? roomGroup["deposited"].length
+      //                   : 0,
+      //               }
+      //             )
+      //             .exec();
+                  
+      //           let motelRoomData = await motelRoomModel
+      //             .findOne({ floors: floorData._id })
+      //             .populate("floors")
+      //             .lean()
+      //             .exec();
+    
+      //           let updateData = {
+      //             availableRoom: lodash.sumBy(motelRoomData.floors, "availableRoom"),
+      //             rentedRoom: lodash.sumBy(motelRoomData.floors, "rentedRoom"),
+      //             depositedRoom: lodash.sumBy(motelRoomData.floors, "depositedRoom"),
+      //             soonExpireContractRoom: lodash.sumBy(motelRoomData.floors, "soonExpireContractRoom"),
+      //           };
+    
+      //           await motelRoomModel
+      //             .findOneAndUpdate({ _id: motelRoomData._id }, updateData)
+      //             .exec();
+      //         }
+      //       }
+      //     } else {
+      //       await global.agendaInstance.agenda.schedule(
+      //         checkOutDay.clone().subtract(1, "months").startOf("day").toDate(),
+      //         "RemindUserRenewContractAndChangeStatusRoomBeforeOneMonth",
+      //         { jobId: resData._id }
+      //       );
+      //     }
+      //   }
+      // }
+
+
       // console.log({b});
       // console.log(typeof(b));
       // console.log({c})
@@ -5631,28 +5765,28 @@ export default class EnergyController {
 // console.log({dateStay});
 // console.log({a});
 
-      const {
-        room: roomModel,
-        floor: floorModel,
-        motelRoom: motelRoomModel,
-        job: jobModel,
-        user: userModel,
-        order: orderModel,
-        transactions: TransactionsModel,
-        bill: BillModel,
-        optionsType: OptionsTypeModel,
-        totalKwh: totalKwhModel,
-      } = global.mongoModel;
+      // const {
+      //   room: roomModel,
+      //   floor: floorModel,
+      //   motelRoom: motelRoomModel,
+      //   job: jobModel,
+      //   user: userModel,
+      //   order: orderModel,
+      //   transactions: TransactionsModel,
+      //   bill: BillModel,
+      //   optionsType: OptionsTypeModel,
+      //   totalKwh: totalKwhModel,
+      // } = global.mongoModel;
 
-      const a = await motelRoomModel.find({isDeleted: false}).lean().exec();
-      console.log({a})
-      console.log(a.length);
-      for(let i = 0; i< a.length; i++) {
-        await motelRoomModel.findOneAndUpdate(
-          {_id: a[i]._id},
-          {isAcceptedByAdmin: true}
-        )
-      }
+      // const a = await motelRoomModel.find({isDeleted: false}).lean().exec();
+      // console.log({a})
+      // console.log(a.length);
+      // for(let i = 0; i< a.length; i++) {
+      //   await motelRoomModel.findOneAndUpdate(
+      //     {_id: a[i]._id},
+      //     {isAcceptedByAdmin: true}
+      //   )
+      // }
 
       // const startOfMonth = '2024-05-01';
       // const endOfMonth = '2024-05-31';
@@ -6127,8 +6261,8 @@ export default class EnergyController {
 
       
               
-      const resData = "Success";
-      return HttpResponse.returnSuccessResponse(res, resData);
+      const xx = "Success";
+      return HttpResponse.returnSuccessResponse(res, xx);
     } catch (error) {
       console.log({error});
       next(error);
