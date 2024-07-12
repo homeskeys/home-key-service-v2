@@ -8,6 +8,8 @@ import UserController from "../controllers/user";
 import TransactionsController from "../controllers/homeKey/transactions";
 import RequestWithdrawsController from "../controllers/homeKey/requestWithdraws";
 import MotelRoomController from "../controllers/homeKey/motelRoom";
+// const transactionQueue = require("../controllers/homeKey/transactionQueue");
+// import transactionQueue from "../controllers/homeKey/transactionQueue"
 
 const adminRoute = express.Router();
 
@@ -34,9 +36,20 @@ adminRoute.route("/order/:id").get(OrderController.getOrderByUser);
 adminRoute
   .route("/transactions/:id")
   .post(TransactionsController.postTransactionPayment);
+
 adminRoute
   .route("/postTransactionsDepositPendingBanking/:id")
   .post(TransactionsController.postTransactionsDepositPendingBanking);
+// adminRoute.route('/postTransactionsDepositPendingBanking/:id').post((req, res, next) => {
+//   // Add the job to the queue
+//   transactionQueue.add({ req, res })
+//     .then(() => {
+//       // Send an immediate response to the client
+//       res.status(202).send({ message: 'Your request is being processed' });
+//     })
+//     .catch(next);
+// });
+
 adminRoute.route("/bankname/user").get(TransactionsController.getBankNameUser);
 adminRoute
   .route("/transactions/user")
