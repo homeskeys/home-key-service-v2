@@ -299,6 +299,8 @@ export default class TransactionsController {
     next: NextFunction
   ): Promise<any> {
     try {
+      // const session = await mongoose.startSession();
+      // session.startTransaction();
       // Init models
       const {
         transactions: TransactionsModel,
@@ -332,6 +334,8 @@ export default class TransactionsController {
 
       if (transactionDataRes) {
         if (transactionDataRes.status === "waiting") {
+          // await session.abortTransaction();
+          // session.endSession();
           return HttpResponse.returnBadRequestResponse(
             res,
             "Phòng đã được đặt cọc trước đó, giao dịch đang chờ phê duyệt. Vui lòng quay lại sau!"
@@ -493,11 +497,133 @@ export default class TransactionsController {
         room: roomData._id,
       });
 
+      // await session.commitTransaction();
+      // session.endSession();
+
       return HttpResponse.returnSuccessResponse(res, transactionsData);
     } catch (e) {
+      // await session.commitTransaction();
+      // session.endSession();
+      console.log({e});
       next(e);
     }
   }
+
+  // static async postTransactionsDepositPendingBanking(req, res) {
+  //   const { transactions: TransactionsModel, order: orderModel, user: userModel, room: roomModel, motelRoom: motelRoomModel, floor: floorModel, job: jobModel } = global.mongoModel;
+  //   const id = req.params.id;
+  //   let { body: formData } = req;
+  
+  //   try {
+  //     const transactionDataRes = await TransactionsModel.findOne({
+  //       room: formData.roomId,
+  //       type: 'deposit',
+  //       isDeleted: false,
+  //       status: 'waiting',
+  //     }).lean().exec();
+  
+  //     if (transactionDataRes) {
+  //       if (transactionDataRes.status === 'waiting') {
+  //         return HttpResponse.returnBadRequestResponse(res, 'Phòng đã được đặt cọc trước đó, giao dịch đang chờ phê duyệt. Vui lòng quay lại sau!');
+  //       }
+  //     }
+  
+  //     const roomData = await RoomController.getRoomById(formData.roomId);
+  
+  //     if (roomData && roomData.error) {
+  //       return HttpResponse.returnBadRequestResponse(res, roomData.errors[0].errorMessage);
+  //     }
+  
+  //     if (!roomData.isCompleted) {
+  //       return HttpResponse.returnBadRequestResponse(res, 'Phòng chưa hoàn thành');
+  //     }
+  
+  //     if (roomData.status !== 'available') {
+  //       return HttpResponse.returnBadRequestResponse(res, 'Phòng Đã Được Đặt');
+  //     }
+  
+  //     const dayID = moment(roomData.availableDate).format('DD/MM/YYYY');
+  
+  //     if (moment(formData.checkInTime, 'MM-DD-YYYY').isBefore(moment(dayID, 'MM-DD-YYYY'))) {
+  //       return HttpResponse.returnBadRequestResponse(res, 'Thời gian bắt đầu thuê nhỏ hơn ngày hiện tại');
+  //     }
+  
+  //     const myDateOld = formData.checkInTime;
+  //     const dateOld = myDateOld.split('/')[0];
+  //     const monthOld = myDateOld.split('/')[1];
+  //     const yearOld = myDateOld.split('/')[2];
+  
+  //     const stringDate = `${dateOld}-${monthOld}-${yearOld}`;
+  //     let date = new Date(stringDate.replace(/(\d{2})-(\d{2})-(\d{4})/, '$2/$1/$3'));
+  //     const myDateNew = date;
+  //     formData.checkInTime = myDateNew;
+  //     formData.room = roomData._id;
+  //     formData.user = req['userId'];
+  
+  //     const floorData = await floorModel.findOne({ rooms: formData.roomId }).lean().exec();
+  
+  //     if (!floorData) {
+  //       return HttpResponse.returnBadRequestResponse(res, 'Tầng không hợp lệ');
+  //     }
+  
+  //     const motelRoomData = await motelRoomModel.findOne({ floors: floorData._id }).lean().exec();
+  
+  //     if (!motelRoomData) {
+  //       return HttpResponse.returnBadRequestResponse(res, 'Phòng không hợp lệ');
+  //     }
+  //     let resData = await jobModel.create(formData);
+  //     let userUpdateData = {
+  //       $addToSet: {
+  //         jobs: resData._id,
+  //       },
+  //     };
+  
+  //     if (req['userProfile'].phoneNumber.number === helpers.stripeZeroOut(formData.phoneNumber)) {
+  //       userUpdateData['currentJob'] = resData._id;
+  //       userUpdateData['room'] = roomData._id;
+  //     }
+  
+  //     await userModel.findOneAndUpdate({ _id: req['userId'] }, userUpdateData, { new: true }).exec();
+  
+  //     await floorModel.findOneAndUpdate({ _id: floorData._id }, { $inc: { availableRoom: -1, depositedRoom: 1 } }).exec();
+  //     await motelRoomModel.findOneAndUpdate({ _id: floorData._id }, { $inc: { availableRoom: -1, depositedRoom: 1 } }).exec();
+  
+  //     const orderData = await orderModel.create({
+  //       user: req['userId'],
+  //       job: resData._id,
+  //       isCompleted: false,
+  //       description: `Tiền cọc phòng tháng ${myDateOld.split('/')[1]}/${myDateOld.split('/')[2]}`,
+  //       amount: formData.deposit,
+  //       type: 'deposit',
+  //       expireTime: moment(resData.checkInTime).add(2, 'days').endOf('day').toDate(),
+  //     });
+  
+  //     resData = await jobModel.findOneAndUpdate({ _id: resData._id }, { isCompleted: orderData.isCompleted, $addToSet: { orders: orderData._id }, currentOrder: orderData._id }, { new: true });
+  
+  //     await global.agendaInstance.agenda.schedule(moment().add('2', 'minutes').toDate(), 'CheckAcceptOrder', { orderId: orderData._id });
+  
+  //     const transactionsData = await TransactionsModel.create({
+  //       user: req['userId'],
+  //       keyPayment: formData.keyPayment,
+  //       keyOrder: orderData.keyOrder,
+  //       description: `Tiền cọc phòng tháng ${myDateOld.split('/')[1]}/${myDateOld.split('/')[2]}`,
+  //       amount: orderData.amount,
+  //       status: 'waiting',
+  //       paymentMethod: formData.type,
+  //       order: orderData._id,
+  //       banking: formData.banking,
+  //       type: 'deposit',
+  //       motel: motelRoomData._id,
+  //       room: roomData._id,
+  //     });
+  
+  //     return HttpResponse.returnSuccessResponse(res, transactionsData);
+  //   } catch (e) {
+  //     console.error(e);
+  //     throw new Error(e);
+  //   }
+  // }
+  
 
   static async postTransactionAfterCheckInCostPendingBanking(
     req: Request,
