@@ -117,6 +117,8 @@ export default class ImageService {
 
     const writeFilePath = `${this.localConfigs.localStoragePath}/${fileName}`;
     const saveFileUrl = `${global.env.protocol}://${global.env.basePath}images/${fileName}`;
+    console.log({writeFilePath})
+    console.log({saveFileUrl})
 
 
     const { image: imageModel } = global.mongoModel;
@@ -179,6 +181,56 @@ export default class ImageService {
         }
       });
     }
+    return defer.promise;
+  }
+
+  async remove(filePath: string): Promise<any> {
+    let defer = q.defer();
+
+    // fs.unlink(filePath, (err) => {
+    //   if (err) {
+    //     defer.resolve({
+    //       error: true,
+    //       message: err.message,
+    //     });
+    //   } else {
+    //     defer.resolve({
+    //       error: false,
+    //       message: 'File removed successfully',
+    //     });
+    //   }
+    // });
+    const absoluteFilePath = `${global.env.protocol}://${global.env.basePath}${filePath}`;
+    const absoluteFilePath2 =`C:\\Workspace\\HomeLand\\HomeLand_2024_v3\\home-key-service-v2\\public\\${filePath}`;
+    const absoluteFilePath3 =``;
+    const relativeFilePath = `/${filePath}`;
+    console.log({absoluteFilePath2});
+    console.log({absoluteFilePath});
+    console.log({relativeFilePath});
+    console.log("dấda", __dirname)
+
+    fs.unlink(absoluteFilePath2, (err) => {
+      if (err) {
+        console.log("lỗi xóa img", err)
+        defer.resolve({
+          error: true,
+          message: err.message,
+        });
+      } else {
+        console.log("đã xóa img")
+        defer.resolve({
+          error: false,
+          message: 'File removed successfully',
+        });
+      }
+    });
+    // try {
+    //   fs.unlinkSync(absoluteFilePath);
+    //   console.log('File is deleted.');
+    // } catch (err) {
+    //   console.error(err);
+    // }
+
     return defer.promise;
   }
 }

@@ -96,7 +96,7 @@ export default class UploadImgController {
   ): Promise<any> {
     try {
       //Init models
-      const { user: userModel } = global.mongoModel;
+      const { user: userModel, image: imageModel } = global.mongoModel;
 
       let { id: id } = req.params;
 
@@ -121,6 +121,7 @@ export default class UploadImgController {
       if (req["files"]) {
         data.images = {};
         const uploadResults = await imageService.upload(req["files"].file);
+        console.log("uploaded: ", uploadResults)
         if (uploadResults.error) {
           return HttpResponse.returnInternalServerResponseWithMessage(
             res,
@@ -129,6 +130,15 @@ export default class UploadImgController {
         }
         data.images.imageUrl = uploadResults.imageUrl;
         data.images.imageId = uploadResults.imageId;
+        
+        let userData = await userModel.findOne({_id: id}).populate("avatar").lean().exec();
+        console.log({userData});
+        if(userData) {
+          if(userData.avatar) {
+            await imageService.remove(userData.avatar.path);
+            console.log("REMOVED IMG");
+          }
+        }
         let resData = await userModel
           .findOneAndUpdate(
             { _id: id },
@@ -143,6 +153,8 @@ export default class UploadImgController {
           .populate("avatar")
           .lean();
       }
+
+      console.log("ĐÃ UPLOAD AVATAR")
 
       return HttpResponse.returnSuccessResponse(res, data);
     } catch (e) {

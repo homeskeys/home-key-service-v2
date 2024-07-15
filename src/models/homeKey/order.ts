@@ -88,6 +88,9 @@ export class Order extends Basic {
   @prop({ default: 0 })
   vehiclePrice: number; // (price x vihicle)
 
+  @prop({ default: 0 })
+  wifiPrice: number; // (price x person)
+
   @prop()
   type: PaymentType;
 

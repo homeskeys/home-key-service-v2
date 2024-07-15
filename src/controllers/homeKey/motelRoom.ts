@@ -571,6 +571,8 @@ export default class MotelRoomController {
       
       // const id = req.params.id;
 
+      console.log("TỚI ĐÂYYY")
+
       let { body: data } = req;
 
       console.log({data});
@@ -1028,6 +1030,7 @@ export default class MotelRoomController {
         waterPrice: data.waterPrice,
         garbagePrice: data.garbagePrice,
         wifiPrice: data.wifiPrice,
+        wifiPriceN: data.wifiPriceN,
         description: data.description,
         floors: [],
         utilities: data.utilities,
@@ -1062,6 +1065,7 @@ export default class MotelRoomController {
             electricityPrice: initMotelRoomData.electricityPrice,
             waterPrice: initMotelRoomData.waterPrice,
             wifiPrice: initMotelRoomData.wifiPrice,
+            wifiPriceN: initMotelRoomData.wifiPriceN,
             garbagePrice: initMotelRoomData.garbagePrice,
             utilities: initMotelRoomData.utilities,
             acreage: data.roomAcreage,
@@ -1804,6 +1808,43 @@ export default class MotelRoomController {
       }
 
       const { body: data } = req;
+      console.log("data motel", data);
+
+      const arrayRemoveImg = data.formData.removedImg;
+
+      if (arrayRemoveImg.length > 0) {
+        const motelRoomData = await motelRoomModel
+          .findOne({ _id: motelRoomId })
+          .lean()
+          .exec();
+
+        if (motelRoomData.images.length > 0) {
+          for (let i = 0; i < motelRoomData.images.length; i++) {
+            const dataImgRemove = await imageModel.findOne({
+              _id: motelRoomData.images[i],
+            });
+            const pathLocal = await helpers.getImageUrl(dataImgRemove);
+            for (let j = 0; j < arrayRemoveImg.length; j++) {
+              if (pathLocal === arrayRemoveImg[j]) {
+                motelRoomData.images.splice(i, 1);
+                i--; //lùi lại để kiểm tra được ảnh phòng tiếp theo liền kề với ảnh đã bị xóa, ảnh sau đã dồn vào ảnh bị xóa
+                break;
+              }
+            }
+          }
+        }
+        // update image Remove
+        const imageRemove = motelRoomData.images;
+        await motelRoomModel
+          .findOneAndUpdate(
+            { _id: motelRoomId },
+            {
+              images: imageRemove,
+            }
+          )
+          .lean()
+          .exec();
+      }
 
       return HttpResponse.returnSuccessResponse(
         res,
@@ -1985,6 +2026,7 @@ export default class MotelRoomController {
   // static async updateMotelRoom(motelRoomId: any, rawData: any, idImg: any): Promise<any>
   static async updateMotelRoom(motelRoomId: any, rawData: any): Promise<any> {
     let data = rawData.formData;
+    console.log("data updateMotelRoom", data);
     if (!data.address.address) {
       const googleMap = new GoogleMapService();
       const googleMapData = await googleMap.getAddressDetail(data.address);
