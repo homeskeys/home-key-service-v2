@@ -68,14 +68,20 @@ export class MotelRoom extends Basic {
   @prop({ default: 0 })
   electricityPrice: number;
 
-  @prop({ default: 0 })
+  @prop({ default: 0 }) // giá xe
   waterPrice: number;
+
+  @prop({ default: 0 })
+  waterPriceN: number;
 
   @prop({ default: 0 })
   garbagePrice: number;
 
   @prop({ default: 0 })
-  wifiPrice: number;
+  wifiPrice: number; //xe
+
+  @prop({ default: 0 })
+  wifiPriceN: number; // wifi
 
   @prop()
   description?: string;

@@ -24,9 +24,10 @@ motelRoomRoute
 
 // Get list of motel room
 motelRoomRoute.route("/list").get(MotelRoomController.getMotelRoomList);
-motelRoomRoute.route("/motelPendingCensor/list").get(MotelRoomController.getMotelRoomPendingCensorList);
 
-motelRoomRoute.route("/motelPendingCensor/").put(MotelRoomController.censorNewMotelById);
+// motelRoomRoute.route("/motelPendingCensor/list").get(MotelRoomController.getMotelRoomPendingCensorList);
+// motelRoomRoute.route("/motelPendingCensor/").put(MotelRoomController.censorNewMotelById);
+
 motelRoomRoute.route("/getMotelByOwner/:id").get(MotelRoomController.getMotelRoomListByOwner);
 
 // Get motel room detail
@@ -56,6 +57,8 @@ motelRoomRoute
 
 /* ---------------------------- CHECK PERMISSION ---------------------------- */
 motelRoomRoute.use(AuthMiddleware.isAuthenticated);
+motelRoomRoute.route("/motelPendingCensor/").put(MotelRoomController.censorNewMotelById);
+
 motelRoomRoute
   .route("/list/admin")
   .get(MotelRoomController.getMotelRoomListAdmin);
@@ -106,6 +109,8 @@ motelRoomRoute
 
 motelRoomRoute.use(AuthMiddleware.isMaster);
 
+// motelRoomRoute.route("/motelPendingCensor/").put(MotelRoomController.censorNewMotelById);
+motelRoomRoute.route("/motelPendingCensor/list").get(MotelRoomController.getMotelRoomPendingCensorList);
 
 
 /* -------------------------------------------------------------------------- */

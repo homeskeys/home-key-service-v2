@@ -1481,6 +1481,7 @@ export default class RoomController {
       const roomPassword = req.body.roomPassword;
       const depositPrice = req.body.depositPrice;
       const linkVideo = req.body.linkVideo;
+      const wifiPriceN = req.body.wifiPriceN;
 
       const wifiPrice = req.body.wifiPrice;
       const garbagePrice = req.body.garbagePrice;
@@ -1491,6 +1492,7 @@ export default class RoomController {
       const person: number = req.body.person;
 
       const arrayRemoveImg = req.body.arrayRemoveImg;
+      console.log({arrayRemoveImg});
 
       if (arrayRemoveImg.length > 0) {
         const RoomData = await roomModel
@@ -1548,6 +1550,7 @@ export default class RoomController {
               vihicle: vihicle,
               person: person,
               linkVideo: linkVideo,
+              wifiPriceN: wifiPriceN,
             }
           )
           .lean()
@@ -1577,6 +1580,7 @@ export default class RoomController {
               vihicle: vihicle,
               person: person,
               linkVideo: linkVideo,
+              wifiPriceN: wifiPriceN,
             }
           )
           .lean()

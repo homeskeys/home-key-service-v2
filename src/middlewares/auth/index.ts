@@ -113,9 +113,12 @@ export default class AuthMiddleware {
   }
 
   static isMaster(req: Request, res: Response, next: NextFunction): void {
+    console.log("TỚI ĐÂY 1")
     if (req["userProfile"].role && req["userProfile"].role.includes("master")) {
+      console.log("TỚI ĐÂY 2")
       next();
     } else {
+      console.log("TỚI ĐÂY 3")
       // Return error
       return HttpResponse.returnUnAuthorizeResponse(
         res,

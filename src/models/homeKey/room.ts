@@ -77,8 +77,11 @@ export class Room extends Basic {
   @prop({ default: 0 })
   garbagePrice: number;
 
-  @prop({ default: 0 })
+  @prop({ default: 0 }) // giá xe
   wifiPrice: number;
+
+  @prop({ default: 0 }) // giá wifi
+  wifiPriceN: number;
 
   @prop({ default: [] })
   utilities: string[];

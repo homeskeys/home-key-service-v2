@@ -2672,12 +2672,14 @@ export default class EnergyController {
         const unitPriceWater = roomData.waterPrice;
         const unitPriceGarbage = roomData.garbagePrice; // dịch vụ
         const unitPriceWifi = roomData.wifiPrice; // xe
+        const unitPriceWifiN = roomData.wifiPriceN; // xe
         const unitPriceOther = 0;
   
         const typeRoom: number = orderData.numberDayStay;
         const typeWater: number = roomData.person;
         const typeGarbage: string = "1";
         const typeWifi: number = roomData.vihicle;
+        const typeWifiN: number = roomData.person;
         const typeOther = 0;
         let typeElectricity: number = orderData.electricNumber;
   
@@ -2685,6 +2687,7 @@ export default class EnergyController {
         const totalAndTaxAll = parseInt(orderData.amount);
         const totalRoom = parseInt(orderData.roomPrice);
         const totalWifi = parseInt(orderData.vehiclePrice);
+        const totalWifiN = parseInt(orderData.wifiPrice);
         const totalGarbage = parseInt(orderData.servicePrice); // service
         const totalWater = parseInt(orderData.waterPrice);
         const totalElectricity = parseInt(orderData.electricPrice);
@@ -2761,6 +2764,11 @@ export default class EnergyController {
             typeWifi: typeWifi,
             unitPriceWifi: unitPriceWifi,
             totalWifi: totalWifi,
+
+            expenseWifiN: "Chi Phí Wifi",
+            typeWifiN: typeWifiN,
+            unitPriceWifiN: unitPriceWifiN,
+            totalWifiN: totalWifiN,
   
             expenseOther: "Tiện Ích Khác",
             typeOther: typeOther,
@@ -3137,6 +3145,7 @@ export default class EnergyController {
     next: NextFunction
   ): Promise<any> {
     try {
+      console.log("innnnn")
       const idTransaction = req.params.id;
       // const idTransaction = "664d29894a755b6434ac92c3";
 
@@ -3236,12 +3245,14 @@ export default class EnergyController {
         const unitPriceWater = billData.water.unitPrice;
         const unitPriceGarbage = billData.garbage.unitPrice; // dịch vụ
         const unitPriceWifi = billData.wifi.unitPrice; // xe
+        const unitPriceWifiN = billData.vehicle.unitPrice; // xe
         const unitPriceOther = billData.other.unitPrice;
 
         const typeRoom: number =billData.room.type;
         const typeWater: number =  billData.water.type;
         const typeGarbage: string = billData.garbage.type;
         const typeWifi: number = billData.wifi.type;
+        const typeWifiN: number = billData.vehicle.type;
         const typeOther = billData.other.type;
         let typeElectricity: number =  billData.electricity.type;
 
@@ -3249,6 +3260,7 @@ export default class EnergyController {
         const totalAndTaxAll = parseInt(billData.totalAndTaxAll);
         const totalRoom = parseInt(billData.room.total);
         const totalWifi = parseInt(billData.wifi.total);
+        const totalWifiN = parseInt(billData.vehicle.total);
         const totalGarbage = parseInt(billData.garbage.total); // service
         const totalWater = parseInt(billData.water.total);
         const totalElectricity = parseInt(billData.electricity.total);
@@ -3333,6 +3345,11 @@ export default class EnergyController {
           typeWifi: typeWifi,
           unitPriceWifi: unitPriceWifi,
           totalWifi: totalWifi,
+
+          expenseWifiN: "Chi Phí Wifi",
+          typeWifiN: typeWifiN,
+          unitPriceWifiN: unitPriceWifiN,
+          totalWifiN: totalWifiN,
 
           expenseOther: "Tiện Ích Khác",
           typeOther: typeOther,
@@ -3598,12 +3615,14 @@ export default class EnergyController {
         const unitPriceWater = billData.water.unitPrice;
         const unitPriceGarbage = billData.garbage.unitPrice; // dịch vụ
         const unitPriceWifi = billData.wifi.unitPrice; // xe
+        const unitPriceWifiN = billData.vehicle.unitPrice; //WIFI
         const unitPriceOther = billData.other.unitPrice;
 
         const typeRoom: number =billData.room.type;
         const typeWater: number =  billData.water.type;
         const typeGarbage: string = billData.garbage.type;
         const typeWifi: number = billData.wifi.type;
+        const typeWifiN: number = billData.vehicle.type;
         const typeOther = billData.other.type;
         let typeElectricity: number =  billData.electricity.type;
 
@@ -3611,6 +3630,7 @@ export default class EnergyController {
         const totalAndTaxAll = parseInt(billData.totalAndTaxAll);
         const totalRoom = parseInt(billData.room.total);
         const totalWifi = parseInt(billData.wifi.total);
+        const totalWifiN = parseInt(billData.vehicle.total);
         const totalGarbage = parseInt(billData.garbage.total); // service
         const totalWater = parseInt(billData.water.total);
         const totalElectricity = parseInt(billData.electricity.total);
@@ -3695,6 +3715,11 @@ export default class EnergyController {
           typeWifi: typeWifi,
           unitPriceWifi: unitPriceWifi,
           totalWifi: totalWifi,
+
+          expenseWifiN: "Chi Phí Wifi",
+          typeWifiN: typeWifiN,
+          unitPriceWifiN: unitPriceWifiN,
+          totalWifiN: totalWifiN,
 
           expenseOther: "Tiện Ích Khác",
           typeOther: typeOther,
@@ -9120,6 +9145,21 @@ async function generateOrderMonthlyPendingPayPDF(json, banking, energy): Promise
               ],
               [
                 {
+                  text: `${json.expenseWifiN}`,
+                  alignment: "left",
+                },
+                {
+                  text: `${json.typeWifiN}`,
+                },
+                {
+                  text: `${json.unitPriceWifiN} đ`,
+                },
+                {
+                  text: `${json.totalWifiN} đ`,
+                },
+              ],
+              [
+                {
                   text: `${json.expenseGarbage}`,
                   alignment: "left",
                 },
@@ -9574,6 +9614,21 @@ async function generateBillMonthlyPDF(json, banking, energy): Promise<Buffer> {
                 },
                 {
                   text: `${json.totalWifi} đ`,
+                },
+              ],
+              [
+                {
+                  text: `${json.expenseWifiN}`,
+                  alignment: "left",
+                },
+                {
+                  text: `${json.typeWifiN}`,
+                },
+                {
+                  text: `${json.unitPriceWifiN} đ`,
+                },
+                {
+                  text: `${json.totalWifiN} đ`,
                 },
               ],
               [
@@ -11337,12 +11392,14 @@ async function getBufferOrderAllType(
     const unitPriceWater = roomData.waterPrice;
     const unitPriceGarbage = roomData.garbagePrice; // dịch vụ
     const unitPriceWifi = roomData.wifiPrice; // xe
+    const unitPriceWifiN = roomData.wifiPriceN; 
     const unitPriceOther = 0;
 
     const typeRoom: number = orderData.numberDayStay;
     const typeWater: number = roomData.person;
     const typeGarbage: string = "1";
     const typeWifi: number = roomData.vihicle;
+    const typeWifiN: number = roomData.person;
     const typeOther = 0;
     let typeElectricity: number = orderData.electricNumber;
 
@@ -11350,6 +11407,7 @@ async function getBufferOrderAllType(
     const totalAndTaxAll = parseInt(orderData.amount);
     const totalRoom = parseInt(orderData.roomPrice);
     const totalWifi = parseInt(orderData.vehiclePrice);
+    const totalWifiN = parseInt(orderData.wifiPrice);
     const totalGarbage = parseInt(orderData.servicePrice); // service
     const totalWater = parseInt(orderData.waterPrice);
     const totalElectricity = parseInt(orderData.electricPrice);
@@ -11426,6 +11484,11 @@ async function getBufferOrderAllType(
         typeWifi: typeWifi,
         unitPriceWifi: unitPriceWifi,
         totalWifi: totalWifi,
+
+        expenseWifiN: "Chi Phí Xe",
+        typeWifiN: typeWifiN,
+        unitPriceWifiN: unitPriceWifiN,
+        totalWifiN: totalWifiN,
 
         expenseOther: "Tiện Ích Khác",
         typeOther: typeOther,

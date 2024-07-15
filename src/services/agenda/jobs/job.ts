@@ -21,12 +21,12 @@ export default (agenda) => {
       let resData = await JobController.getJob(job.attrs.data.jobId);
 
       if (resData.isActived) {
-        await NotificationController.createNotification({
-          title: "Thông báo đóng tiền phòng",
-          content: "Vui lòng thanh toán tiền phòng trong vòng 5 ngày.",
-          user: resData.user,
-          isRead: false,
-        });
+        // await NotificationController.createNotification({
+        //   title: "Thông báo đóng tiền phòng",
+        //   content: "Vui lòng thanh toán tiền phòng trong vòng 5 ngày.",
+        //   user: resData.user,
+        //   isRead: false,
+        // });
 
         const orderData = await orderModel.create({
           user: resData.user,
@@ -128,7 +128,8 @@ export default (agenda) => {
       const servicePrice = roomData.garbagePrice;
       const vehiclePrice = roomData.wifiPrice * roomData.vihicle;
       const roomPrice = resData.room.price;
-      const amount = roomPrice + vehiclePrice + servicePrice + waterPrice + electricPrice;
+      const wifiPriceN = roomData.wifiPriceN * roomData.person;
+      const amount = roomPrice + vehiclePrice + servicePrice + waterPrice + electricPrice + wifiPriceN;
 
 
 
@@ -145,6 +146,7 @@ export default (agenda) => {
             servicePrice: servicePrice,
             vehiclePrice: vehiclePrice,
             roomPrice: roomPrice,
+            wifiPrice: wifiPriceN,
             description: `Tiền phòng tháng ${ timeCal.month() + 1}/${ timeCal.year()}`, //đang ở đầu tháng để tạo order cho tháng trước
             amount: amount,
             type: "monthly",
@@ -245,7 +247,9 @@ export default (agenda) => {
           const servicePrice = roomData.garbagePrice/dayOfMon * numberDayStay;
           const vehiclePrice = (roomData.wifiPrice * roomData.vihicle)/dayOfMon * numberDayStay;
           const roomPrice = (resData.room.price / dayOfMon) * numberDayStay;
-          const amount = roomPrice + vehiclePrice + servicePrice + waterPrice + electricPrice;
+          const wifiPriceN = roomData.wifiPriceN * roomData.person;
+          const amount = roomPrice + vehiclePrice + servicePrice + waterPrice + electricPrice + wifiPriceN;
+          
           
           const orderData = await orderModel.create({
             user: resData.user,
@@ -258,6 +262,7 @@ export default (agenda) => {
             servicePrice: servicePrice,
             vehiclePrice: vehiclePrice,
             roomPrice: roomPrice,
+            wifiPrice: wifiPriceN,
             description: `Tiền phòng tháng ${moment(checkInTime).month() + 1}/${moment(checkInTime).year()}`,
             amount: amount,
             type: "monthly",
@@ -466,6 +471,10 @@ export default (agenda) => {
 
       let data = job.attrs.data;
 
+      const adminData = await userModel.findOne({
+        role: { $in: ['master']}
+      }).lean().exec();
+
       let orderData = await orderModel.findOne({
         _id: job.attrs.data.orderId,
         isDeleted: false,
@@ -495,6 +504,8 @@ export default (agenda) => {
               }
             });
 
+
+
             const mailOptions = {
               from: 'cr7ronadol12345@gmail.com',
               // to: 'quyetthangmarvel@gmail.com',
@@ -502,6 +513,13 @@ export default (agenda) => {
               subject: `[${motelData.name}] - [${roomData.name}] NHẮC NHỞ DUYỆT THANH TOÁN CỌC`,
               text: `Vui lòng duyệt giao dịch cọc mã ${transactionData.keyPayment} cho phòng ${roomData.name}, tòa ${motelData.name}. Nếu minh chứng chuyển tiền là sai, vui lòng liên hệ admin để xử lý!`,
             };
+
+            await NotificationController.createNotification({
+              title: "Thông báo duyệt thanh toán cọc",
+              content: `Vui lòng duyệt cọc cho phòng ${roomData.name} thuộc tòa nhà ${motelData.name}.`,
+              user: adminData._id,
+              isRead: false,
+            });
 
             transporter.sendMail(mailOptions, function (error, info) {
               if (error) {
@@ -547,17 +565,59 @@ export default (agenda) => {
 
       let jobData = await jobModel.findOne(job.attrs.data.jobId);
 
+      const userData = await userModel.findOne({ _id: jobData.user })
+                                                                  .lean()
+                                                                  .exec();
+
 
       if (jobData) {
         let roomId = jobData.room;
 
         if (!jobData.isActived && !jobData.isDeleted) {
+
+          const roomData = await roomModel.findOne({_id: jobData.room}).lean().exec();
+          const floorDataN = await floorModel.findOne({rooms: jobData.room}).lean().exec();
+
+          const motelData = await motelRoomModel.findOne({floors: floorDataN._id}).lean().exec();
+
+
           await NotificationController.createNotification({
-            title: "Thông báo hết hạn kích hoạt",
-            content: "Bạn đã quá hạn nhận phòng. Hệ thống tự hủy đặt phòng!",
+            title: "Thông báo hủy cọc",
+            content: `Phòng ${roomData.name} thuộc tòa nhà ${motelData.name} của quý khách đã bị hủy cọc vì không kích hoạt đúng thời hạn.`,
             user: jobData.user,
             isRead: false,
           });
+
+          if(userData.email) {
+            const transporter = nodemailer.createTransport({
+              service: 'gmail',
+              auth: {
+                user: 'cr7ronadol12345@gmail.com',
+                pass: 'wley oiaw yhpl oupy'
+              }
+            });
+
+            const mailOptions = {
+              from: 'cr7ronadol12345@gmail.com',
+              // to: 'quyetthangmarvel@gmail.com',
+              // to: "cr7ronadol12345@gmail.com",  // thay bằng mail admin
+              to: userData.email,
+              subject: `[${motelData.name}] - [${roomData.name}] THÔNG BÁO HỦY CỌC`,
+              text: `Phòng ${roomData.name} thuộc tòa nhà ${motelData.name} của quý khách đã bị hủy cọc vì không kích hoạt đúng thời hạn.`,
+            };
+    
+            transporter.sendMail(mailOptions, function (error, info) {
+              if (error) {
+                console.error(error);
+              } else {
+                // console.log('Email đã được gửi: ' + info.response);
+              }
+            });
+          }
+
+
+
+          
 
           const jobDataAfterUpdate = await jobModel
             .findOneAndUpdate(
@@ -816,6 +876,13 @@ export default (agenda) => {
           // if (moment().date() <= 3) {
           if (checkOutTimePlus3Days.diff(moment().endOf('day')) >= 0) {
             if (userData) {
+              await NotificationController.createNotification({
+                title: "Thông báo đóng tiền phòng",
+                content:`Quý khách vui lòng đóng tiền phòng tháng${checkOutTime.month() + 1}/${checkOutTime.year()} cho phòng ${jobData.room.name} thuộc dãy ${jobData.motelRoom.name}. Hạn đóng tới hết ngày 03/${moment().month() + 1}/${moment().year()}. Lưu ý: Nếu không hoàn thành thanh toán, quý khách sẽ không được hoàn trả tiền cọc.`,
+                user: jobData.user,
+                isRead: false,
+              });
+
               if (userData.email) {
                 const transporter = nodemailer.createTransport({
                   service: 'gmail',
@@ -832,6 +899,8 @@ export default (agenda) => {
                   subject: `[${jobData.room.name}] THÔNG BÁO ĐÓNG TIỀN PHÒNG THÁNG ${checkOutTime.month() + 1}/${checkOutTime.year()}`,
                   text: `Quý khách vui lòng đóng tiền phòng tháng${checkOutTime.month() + 1}/${checkOutTime.year()} cho phòng ${jobData.room.name} thuộc dãy ${jobData.motelRoom.name}. Hạn đóng tới hết ngày 03/${moment().month() + 1}/${moment().year()}. Lưu ý: Nếu không hoàn thành thanh toán, quý khách sẽ không được hoàn trả tiền cọc.`,
                 };
+
+                
   
                 // Gửi email
                 transporter.sendMail(mailOptions, function (error, info) {
@@ -958,6 +1027,13 @@ export default (agenda) => {
             }
 
             if(userData) {
+              await NotificationController.createNotification({
+                title: "Thông báo hủy hợp đồng",
+                content: `Hợp đồng cho thuê phòng ${jobData.room.name} thuộc dãy ${jobData.motelRoom.name} của quý khách đã bị hủy vì quý khách chưa hoàn thành tiền phòng tháng ${moment().month()}/${moment().year()}.`,
+                user: jobData.user,
+                isRead: false,
+              });
+
               if (userData.email) {
                 const transporter = nodemailer.createTransport({
                   service: 'gmail',
@@ -974,6 +1050,8 @@ export default (agenda) => {
                   subject: `[${jobData.room.name}] THÔNG BÁO HỦY HỢP ĐỒNG CHO THUÊ`, //tháng trước
                   text: `Hợp đồng cho thuê phòng ${jobData.room.name} thuộc dãy ${jobData.motelRoom.name} của quý khách đã bị hủy vì quý khách chưa hoàn thành tiền phòng tháng ${moment().month()}/${moment().year()}.`,
                 };
+
+                
   
                 // Gửi email
                 transporter.sendMail(mailOptions, function (error, info) {
@@ -1137,6 +1215,13 @@ export default (agenda) => {
 
           if (moment().date() <= 4) {
             if (userData) {
+              await NotificationController.createNotification({
+                title: "Thông báo đóng tiền phòng",
+                content: `Quý khách vui lòng đóng tiền phòng tháng${checkOutTime.month()}/${checkOutTime.year()} cho phòng ${jobData.room.name} thuộc dãy ${jobData.motelRoom.name}. Hạn đóng tới hết ngày 04/${checkOutTime.month() + 1}/${checkOutTime.year()}. Lưu ý: Nếu không hoàn thành thanh toán, quý khách sẽ không được hoàn trả tiền cọc.`,
+                user: jobData.user,
+                isRead: false,
+              });
+
               if (userData.email) {
                 const transporter = nodemailer.createTransport({
                   service: 'gmail',
@@ -1153,6 +1238,8 @@ export default (agenda) => {
                   subject: `[${jobData.room.name}] THÔNG BÁO ĐÓNG TIỀN PHÒNG THÁNG ${checkOutTime.month()}/${checkOutTime.year()}`,//tháng trước
                   text: `Quý khách vui lòng đóng tiền phòng tháng${checkOutTime.month()}/${checkOutTime.year()} cho phòng ${jobData.room.name} thuộc dãy ${jobData.motelRoom.name}. Hạn đóng tới hết ngày 04/${checkOutTime.month() + 1}/${checkOutTime.year()}. Lưu ý: Nếu không hoàn thành thanh toán, quý khách sẽ không được hoàn trả tiền cọc.`,
                 };
+
+                
   
                 // Gửi email
                 transporter.sendMail(mailOptions, function (error, info) {
@@ -1238,7 +1325,8 @@ export default (agenda) => {
             const servicePrice = roomData.garbagePrice/dayOfMon * numberDayStay;
             const vehiclePrice = (roomData.wifiPrice * roomData.vihicle)/dayOfMon * numberDayStay;
             const roomPrice = (jobData.room.price / dayOfMon) * numberDayStay;
-            const amount = roomPrice + vehiclePrice + servicePrice + waterPrice + electricPrice;
+            const wifiPriceN = roomData.wifiPriceN * roomData.person;
+            const amount = roomPrice + vehiclePrice + servicePrice + waterPrice + electricPrice + wifiPriceN;
 
             //oder  những ngày của tháng mới
             const orderDataNoPay = await orderModel.create({
@@ -1252,6 +1340,7 @@ export default (agenda) => {
               servicePrice: servicePrice,
               vehiclePrice: vehiclePrice,
               roomPrice: roomPrice,
+              wifiPrice: wifiPriceN,
               description: `Tiền phòng tháng ${moment().month() + 1}/${moment().year()}`,
               amount: amount,
               type: "monthly",
@@ -1361,6 +1450,13 @@ export default (agenda) => {
             }
 
             if(userData) {
+              await NotificationController.createNotification({
+                title: "Thông báo hủy hợp đồng",
+                content: `Hợp đồng cho thuê phòng ${jobData.room.name} thuộc dãy ${jobData.motelRoom.name} của quý khách đã bị hủy vì quý khách chưa hoàn thành tiền phòng tháng ${moment().month()}/${moment().year()}.`,
+                user: jobData.user,
+                isRead: false,
+              });
+
               if (userData.email) {
                 const transporter = nodemailer.createTransport({
                   service: 'gmail',
@@ -1377,6 +1473,8 @@ export default (agenda) => {
                   subject: `[${jobData.room.name}] THÔNG BÁO HỦY HỢP ĐỒNG CHO THUÊ`, //tháng trước
                   text: `Hợp đồng cho thuê phòng ${jobData.room.name} thuộc dãy ${jobData.motelRoom.name} của quý khách đã bị hủy vì quý khách chưa hoàn thành tiền phòng tháng ${moment().month()}/${moment().year()}.`,
                 };
+
+                
   
                 // Gửi email
                 transporter.sendMail(mailOptions, function (error, info) {
@@ -1484,7 +1582,8 @@ export default (agenda) => {
           const servicePrice = roomData.garbagePrice/dayOfMon * numberDayStay;
           const vehiclePrice = (roomData.wifiPrice * roomData.vihicle)/dayOfMon * numberDayStay;
           const roomPrice = (resData.room.price / dayOfMon) * numberDayStay;
-          const amount = roomPrice + vehiclePrice + servicePrice + waterPrice + electricPrice;
+          const wifiPriceN = roomData.wifiPriceN * roomData.person;
+          const amount = roomPrice + vehiclePrice + servicePrice + waterPrice + electricPrice + wifiPriceN;
 
 
   
@@ -1501,6 +1600,7 @@ export default (agenda) => {
             servicePrice: servicePrice,
             vehiclePrice: vehiclePrice,
             roomPrice: roomPrice,
+            wifiPrice: wifiPriceN,
             description: `Tiền phòng tháng ${checkOutDay.month() + 1}/${checkOutDay.year()}`,
             amount: amount,
             type: "monthly",
@@ -1579,6 +1679,13 @@ export default (agenda) => {
           if (moment().date() <= 6) {
             //gửi lần cuối vào đầu ngày cuối (lấy hiện tại trừ thời gian hết hạn)
             if (userData) {
+              await NotificationController.createNotification({
+                title: "Thông báo đóng tiền phòng",
+                content: `Quý khách vui lòng đóng tiền phòng tháng ${checkOutDay.month() + 1}/${checkOutDay.year()} cho phòng ${jobData.room.name} thuộc dãy ${jobData.motelRoom.name}. Hạn đóng tới hết ngày 06/${checkOutDay.month() + 1}/${checkOutDay.year()}. Lưu ý: Nếu không thực hiện đóng hóa đơn này, quý khách sẽ không được hoàn trả tiền cọc.`,
+                user: jobData.user,
+                isRead: false,
+              });
+
               if (userData.email) {
                 const transporter = nodemailer.createTransport({
                   service: 'gmail',
@@ -1595,6 +1702,7 @@ export default (agenda) => {
                   subject: `[${jobData.room.name}] THÔNG BÁO ĐÓNG TIỀN PHÒNG THÁNG ${checkOutDay.month() + 1}/${checkOutDay.year()}`,
                   text: `Quý khách vui lòng đóng tiền phòng tháng ${checkOutDay.month() + 1}/${checkOutDay.year()} cho phòng ${jobData.room.name} thuộc dãy ${jobData.motelRoom.name}. Hạn đóng tới hết ngày 06/${checkOutDay.month() + 1}/${checkOutDay.year()}. Lưu ý: Nếu không thực hiện đóng hóa đơn này, quý khách sẽ không được hoàn trả tiền cọc.`,
                 };
+
   
                 // Gửi email
                 transporter.sendMail(mailOptions, function (error, info) {
@@ -1868,6 +1976,13 @@ export default (agenda) => {
 
           if (moment().date() <= 15) { //note gốc là: 15
             if (userData) {
+              await NotificationController.createNotification({
+                title: "Thông báo đóng tiền phòng",
+                content: `Quý khách vui lòng đóng tiền phòng tháng ${moment().month()}/${moment().year()} cho phòng ${jobData.room.name} thuộc dãy ${jobData.motelRoom.name}. Hạn đóng tới hết ngày 15/${moment().month() + 1}/${moment().year()}. Lưu ý: Nếu không hoàn thành đúng hạn, quý khách sẽ bị hủy phòng và mất cọc.`,
+                user: jobData.user,
+                isRead: false,
+              });
+
               if (userData.email) {
                 const transporter = nodemailer.createTransport({
                   service: 'gmail',
@@ -1966,7 +2081,8 @@ export default (agenda) => {
             const servicePrice = roomData.garbagePrice/dayOfMon * numberDayStay;
             const vehiclePrice = (roomData.wifiPrice * roomData.vihicle)/dayOfMon * numberDayStay;
             const roomPrice = (jobData.room.price / dayOfMon) * numberDayStay;
-            const amount = roomPrice + vehiclePrice + servicePrice + waterPrice + electricPrice;
+            const wifiPriceN = roomData.wifiPriceN * roomData.person;
+            const amount = roomPrice + vehiclePrice + servicePrice + waterPrice + electricPrice + wifiPriceN;
 
             //oder  những ngày của tháng mới
             const orderDataNoPay = await orderModel.create({
@@ -1980,6 +2096,7 @@ export default (agenda) => {
               servicePrice: servicePrice,
               vehiclePrice: vehiclePrice,
               roomPrice: roomPrice,
+              wifiPrice: wifiPriceN,
               description: `Tiền phòng tháng ${moment().month() + 1}/${moment().year()}`,
               amount: amount,
               type: "monthly",
@@ -2084,6 +2201,13 @@ export default (agenda) => {
               .exec();
 
             if(userData) {
+              await NotificationController.createNotification({
+                title: "Thông báo hủy hợp đồng",
+                content: `Hợp đồng cho thuê phòng ${jobData.room.name} thuộc dãy ${jobData.motelRoom.name} của quý khách đã bị hủy vì quý khách chưa hoàn thành tiền phòng tháng ${moment().month()}/${moment().year()}.`,
+                user: jobData.user,
+                isRead: false,
+              });
+
               if (userData.email) {
                 const transporter = nodemailer.createTransport({
                   service: 'gmail',
@@ -2100,6 +2224,8 @@ export default (agenda) => {
                   subject: `[${jobData.room.name}] THÔNG BÁO HỦY HỢP ĐỒNG CHO THUÊ`, //tháng trước
                   text: `Hợp đồng cho thuê phòng ${jobData.room.name} thuộc dãy ${jobData.motelRoom.name} của quý khách đã bị hủy vì quý khách chưa hoàn thành tiền phòng tháng ${moment().month()}/${moment().year()}.`,
                 };
+
+                
   
                 // Gửi email
                 transporter.sendMail(mailOptions, function (error, info) {
@@ -2181,6 +2307,13 @@ export default (agenda) => {
 
           if (moment().date() <= checkOutDay.date()) { //lập lịch cho sau ngày hết hạn để hủy, không còn gửi mail
             if (userData) {
+              await NotificationController.createNotification({
+                title: "Thông báo đóng tiền phòng",
+                content: `Quý khách vui lòng đóng tiền phòng tháng ${timeCal.month() + 1}/${timeCal.year()} cho phòng ${jobData.room.name} thuộc dãy ${jobData.motelRoom.name}. Hạn đóng tới hết ngày ${checkOutDay.format("DD-MM-YYYY")}. Lưu ý: Nếu không hoàn thành đúng hạn, quý khách sẽ bị hủy phòng và mất cọc.`,
+                user: jobData.user,
+                isRead: false,
+              });
+
               if (userData.email) {
                 const transporter = nodemailer.createTransport({
                   service: 'gmail',
@@ -2197,6 +2330,8 @@ export default (agenda) => {
                   subject: `[${jobData.room.name}] THÔNG BÁO ĐÓNG TIỀN PHÒNG THÁNG ${timeCal.month() + 1}/${timeCal.year()}`,
                   text: `Quý khách vui lòng đóng tiền phòng tháng ${timeCal.month() + 1}/${timeCal.year()} cho phòng ${jobData.room.name} thuộc dãy ${jobData.motelRoom.name}. Hạn đóng tới hết ngày ${checkOutDay.format("DD-MM-YYYY")}. Lưu ý: Nếu không hoàn thành đúng hạn, quý khách sẽ bị hủy phòng và mất cọc.`,
                 };
+
+                
   
                 // Gửi email
                 transporter.sendMail(mailOptions, function (error, info) {
@@ -2277,7 +2412,8 @@ export default (agenda) => {
             const servicePrice = roomData.garbagePrice/dayOfMon * numberDayStay;
             const vehiclePrice = (roomData.wifiPrice * roomData.vihicle)/dayOfMon * numberDayStay;
             const roomPrice = (jobData.room.price / dayOfMon) * numberDayStay;
-            const amount = roomPrice + vehiclePrice + servicePrice + waterPrice + electricPrice;
+            const wifiPriceN = roomData.wifiPriceN * roomData.person;
+            const amount = roomPrice + vehiclePrice + servicePrice + waterPrice + electricPrice + wifiPriceN;
 
             //oder  những ngày của tháng mới
             const orderDataNoPay = await orderModel.create({
@@ -2291,6 +2427,7 @@ export default (agenda) => {
               servicePrice: servicePrice,
               vehiclePrice: vehiclePrice,
               roomPrice: roomPrice,
+              wifiPrice: wifiPriceN,
               description: `Tiền phòng tháng ${moment().month() + 1}/${moment().year()}`,
               amount: amount,
               type: "monthly",
@@ -2399,6 +2536,13 @@ export default (agenda) => {
             }
 
             if(userData) {
+              await NotificationController.createNotification({
+                title: "Thông báo hủy hợ đồng",
+                content: `Hợp đồng cho thuê phòng ${jobData.room.name} thuộc dãy ${jobData.motelRoom.name} của quý khách đã bị hủy vì quý khách chưa hoàn thành tiền phòng tháng ${moment().month()}/${moment().year()}.`,
+                user: jobData.user,
+                isRead: false,
+              });
+
               if (userData.email) {
                 const transporter = nodemailer.createTransport({
                   service: 'gmail',
@@ -2415,6 +2559,8 @@ export default (agenda) => {
                   subject: `[${jobData.room.name}] THÔNG BÁO HỦY HỢP ĐỒNG CHO THUÊ`, //tháng trước
                   text: `Hợp đồng cho thuê phòng ${jobData.room.name} thuộc dãy ${jobData.motelRoom.name} của quý khách đã bị hủy vì quý khách chưa hoàn thành tiền phòng tháng ${moment().month()}/${moment().year()}.`,
                 };
+
+                
   
                 // Gửi email
                 transporter.sendMail(mailOptions, function (error, info) {
@@ -2505,6 +2651,13 @@ export default (agenda) => {
 
           if (moment().date() <= 15) {
             if (userData) {
+              await NotificationController.createNotification({
+                title: "Thông báo đóng tiền phòng",
+                content: `Quý khách vui lòng đóng tiền phòng tháng ${timeCal.month() + 1}/${timeCal.year()} cho phòng ${jobData.room.name} thuộc dãy ${jobData.motelRoom.name}. Hạn đóng tới hết ngày 15/${moment().month() + 1}/${moment().year()}. Lưu ý: Nếu không hoàn thành đúng hạn, quý khách sẽ bị hủy phòng và mất cọc.`,
+                user: jobData.user,
+                isRead: false,
+              });
+
               if (userData.email) {
                 const transporter = nodemailer.createTransport({
                   service: 'gmail',
@@ -2521,6 +2674,8 @@ export default (agenda) => {
                   subject: `[${jobData.room.name}] THÔNG BÁO ĐÓNG TIỀN PHÒNG THÁNG ${timeCal.month() + 1}/${timeCal.year()}`,
                   text: `Quý khách vui lòng đóng tiền phòng tháng ${timeCal.month() + 1}/${timeCal.year()} cho phòng ${jobData.room.name} thuộc dãy ${jobData.motelRoom.name}. Hạn đóng tới hết ngày 15/${moment().month() + 1}/${moment().year()}. Lưu ý: Nếu không hoàn thành đúng hạn, quý khách sẽ bị hủy phòng và mất cọc.`,
                 };
+
+                
   
                 // Gửi email
                 transporter.sendMail(mailOptions, function (error, info) {
@@ -2601,7 +2756,8 @@ export default (agenda) => {
             const servicePrice = roomData.garbagePrice/dayOfMon * numberDayStay;
             const vehiclePrice = (roomData.wifiPrice * roomData.vihicle)/dayOfMon * numberDayStay;
             const roomPrice = (jobData.room.price / dayOfMon) * numberDayStay;
-            const amount = roomPrice + vehiclePrice + servicePrice + waterPrice + electricPrice;
+            const wifiPriceN = roomData.wifiPriceN * roomData.person;
+            const amount = roomPrice + vehiclePrice + servicePrice + waterPrice + electricPrice + wifiPriceN;
 
             //order  những ngày của tháng mới
             const orderDataNoPay = await orderModel.create({
@@ -2615,6 +2771,7 @@ export default (agenda) => {
               servicePrice: servicePrice,
               vehiclePrice: vehiclePrice,
               roomPrice: roomPrice,
+              wifiPrice: wifiPriceN,
               description: `Tiền phòng tháng ${moment().month() + 1}/${moment().year()}`,
               amount: amount,
               type: "monthly",
@@ -2722,6 +2879,13 @@ export default (agenda) => {
             }
 
             if(userData) {
+              await NotificationController.createNotification({
+                title: "Thông báo hủy hợp đồng",
+                content: `Hợp đồng cho thuê phòng ${jobData.room.name} thuộc dãy ${jobData.motelRoom.name} của quý khách đã bị hủy vì quý khách chưa hoàn thành tiền phòng tháng ${moment().month()}/${moment().year()}.`,
+                user: jobData.user,
+                isRead: false,
+              });
+
               if (userData.email) {
                 const transporter = nodemailer.createTransport({
                   service: 'gmail',
@@ -2738,6 +2902,8 @@ export default (agenda) => {
                   subject: `[${jobData.room.name}] THÔNG BÁO HỦY HỢP ĐỒNG CHO THUÊ`, //tháng trước
                   text: `Hợp đồng cho thuê phòng ${jobData.room.name} thuộc dãy ${jobData.motelRoom.name} của quý khách đã bị hủy vì quý khách chưa hoàn thành tiền phòng tháng ${moment().month()}/${moment().year()}.`,
                 };
+
+                
   
                 // Gửi email
                 transporter.sendMail(mailOptions, function (error, info) {
@@ -2879,7 +3045,8 @@ export default (agenda) => {
           const servicePrice = roomData.garbagePrice/dayOfMon * numberDayStay;
           const vehiclePrice = (roomData.wifiPrice * roomData.vihicle)/dayOfMon * numberDayStay;
           const roomPrice = (resData.room.price / dayOfMon) * numberDayStay;
-          const amount = roomPrice + vehiclePrice + servicePrice + waterPrice + electricPrice;
+          const wifiPriceN = roomData.wifiPriceN * roomData.person;
+          const amount = roomPrice + vehiclePrice + servicePrice + waterPrice + electricPrice + wifiPriceN;
 
           console.log("HHHHH: GGG", endTime);
   
@@ -2895,6 +3062,7 @@ export default (agenda) => {
             servicePrice: servicePrice,
             vehiclePrice: vehiclePrice,
             roomPrice: roomPrice,
+            wifiPrice: wifiPriceN,
             description: `Tiền phòng tháng ${checkOutDay.month() + 1}/${checkOutDay.year()}`,
             amount: amount,
             type: "monthly",
@@ -2990,6 +3158,13 @@ export default (agenda) => {
 
             //gửi lần cuối vào đầu ngày cuối (lấy hiện tại trừ thời gian hết hạn)
             if (userData) {
+              await NotificationController.createNotification({
+                title: "Thông báo đóng tiền phòng",
+                content: `Quý khách vui lòng đóng tiền phòng tháng ${checkOutDay.month() + 1}/${checkOutDay.year()} cho phòng ${jobData.room.name} thuộc dãy ${jobData.motelRoom.name}. Hạn đóng tới hết ngày ${checkOutDayPlus3.format("DD-MM-YYYY")}. Lưu ý: Nếu không thực hiện đóng hóa đơn này, quý khách sẽ không được hoàn trả tiền cọc.`,
+                user: jobData.user,
+                isRead: false,
+              });
+
               if (userData.email) {
                 const transporter = nodemailer.createTransport({
                   service: 'gmail',
@@ -3006,6 +3181,8 @@ export default (agenda) => {
                   subject: `[${jobData.room.name}] THÔNG BÁO ĐÓNG TIỀN PHÒNG THÁNG ${checkOutDay.month() + 1}/${checkOutDay.year()}`,
                   text: `Quý khách vui lòng đóng tiền phòng tháng ${checkOutDay.month() + 1}/${checkOutDay.year()} cho phòng ${jobData.room.name} thuộc dãy ${jobData.motelRoom.name}. Hạn đóng tới hết ngày ${checkOutDayPlus3.format("DD-MM-YYYY")}. Lưu ý: Nếu không thực hiện đóng hóa đơn này, quý khách sẽ không được hoàn trả tiền cọc.`,
                 };
+
+                
   
                 // Gửi email
                 transporter.sendMail(mailOptions, function (error, info) {
@@ -3314,6 +3491,13 @@ export default (agenda) => {
             console.log({userData});
 
             if(userData) {
+              await NotificationController.createNotification({
+                title: "Thông báo gia hạn hợp đồng",
+                content: `Phòng ${resData.room.name} thuộc dãy ${resData.motelRoom.name} của quý khách sẽ hết hợp đồng vào ${checkOutDay.clone().format("DD-MM-YYYY")}. Vui lòng truy cập trang web: ${process.env.BASE_PATH_CLINET1} thực hiện đăng nhập rồi vào đường dẫn ${process.env.BASE_PATH_CLINET3}job-detail/${resData._id}/${resData.room._id} để gian hạn hợp đồng. Lưu ý: Hợp đồng chỉ có thể gia hạn trước thời gian hết hạn 15 ngày.`,
+                user: userData._id,
+                isRead: false,
+              });
+              
               //Gửi mail nhắc nhở
               if(userData.email) {
                 console.log("email: ", userData.email);
@@ -3331,6 +3515,8 @@ export default (agenda) => {
                     subject: `[${resData.room.name}] THÔNG BÁO GIA HẠN HỢP ĐỒNG TRỌ`,
                     text: `Phòng ${resData.room.name} thuộc dãy ${resData.motelRoom.name} của quý khách sẽ hết hợp đồng vào ${checkOutDay.clone().format("DD-MM-YYYY")}. Vui lòng truy cập trang web: ${process.env.BASE_PATH_CLINET1} thực hiện đăng nhập rồi vào đường dẫn ${process.env.BASE_PATH_CLINET3}job-detail/${resData._id}/${resData.room._id} để gian hạn hợp đồng. Lưu ý: Hợp đồng chỉ có thể gia hạn trước thời gian hết hạn 15 ngày.`,
                 };
+
+                
 
                 transporter.sendMail(mailOptions, function (error, info) {
                   if (error) {

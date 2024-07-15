@@ -5,6 +5,7 @@ import * as lodash from "lodash";
 import { helpers } from "../../utils";
 import ImageService from "../../services/image";
 import HttpResponse from "../../services/response";
+import NotificationController from "./notification";
 import RoomController from "./room";
 import e = require("express");
 import sendMail from "../../utils/Mailer/mailer";
@@ -17,6 +18,7 @@ import { OrderModel } from "models/homeKey/order";
 import { FloorModel } from "models/homeKey/floor";
 import { RoomList } from "twilio/lib/rest/video/v1/room";
 import * as mongoose from "mongoose";
+var nodemailer = require('nodemailer');
 var optionsNumbeer = {
   // example input , yes negative values do work
   min: 1000,
@@ -783,9 +785,12 @@ export default class TransactionsController {
 
       let orderNoPaymentList = [];
       for (let i: number = 0; i < currentOrderIdOfListLength; i++) {
-        let orderData = await orderModel.findOne({ _id: currentOrderIdOfList[i] }).lean().exec();
-        if (orderData.isCompleted === false) {
-          orderNoPaymentList.push(orderData);
+        let orderData = await orderModel.findOne({ _id: currentOrderIdOfList[i]}).lean().exec();
+        console.log("orderData: ", orderData);
+        if(orderData) {
+          if (orderData.isCompleted === false) {
+            orderNoPaymentList.push(orderData);
+          }
         }
       }
 
@@ -865,14 +870,11 @@ export default class TransactionsController {
         return HttpResponse.returnSuccessResponse(res, []);
       }
 
-      console.log({ motelData });
-
       let roomIdList = [];
       // roomIdList = roomIdList.concat(motelData.floors.filter((floor) => floor.rooms));
       for (let i: number = 0; i < motelData.floors.length; i++) {
         roomIdList = roomIdList.concat(motelData.floors[i].rooms);
       }
-      console.log({ roomIdList });
 
       if (roomIdList.length === 0) {
         // return HttpResponse.returnBadRequestResponse(
@@ -891,40 +893,46 @@ export default class TransactionsController {
           room: roomIdList[i]
         }).populate("currentOrder room").lean().exec();
 
+        console.log(`${roomIdList[i]} : ${jobData}`);
+
         if (jobData) {
-          if (jobData.currentOrder.isCompleted === false && jobData.currentOrder.type === "monthly") {
-            let userData = await userModel.findOne({ _id: jobData.user }).lean().exec();
-            let data;
-            if (userData && jobData.room) {
-              data = {
-                userName: userData.lastName + " " + userData.firstName,
-                userPhone: userData.phoneNumber.countryCode + " " + userData.phoneNumber.number,
-                roomName: jobData.room.name,
-                ...jobData.currentOrder,
-              };
-            } else if (userData) {
-              data = {
-                userName: userData.lastName + " " + userData.firstName,
-                userPhone: userData.phoneNumber.countryCode + " " + userData.phoneNumber.number,
-                roomName: null,
-                ...jobData.currentOrder,
-              };
-            } else if (jobData.room) {
-              data = {
-                userName: null,
-                userPhone: null,
-                roomName: jobData.room.name,
-                ...jobData.currentOrder,
-              };
-            } else {
-              data = {
-                userName: null,
-                userPhone: null,
-                roomName: null,
-                ...jobData.currentOrder,
-              };
+          // const currentOrderRes = await orderModel.findOne({_id: jobData.currentOrder}).lean().exec();
+          if(jobData.currentOrder !== null) {
+            if (jobData.currentOrder.isCompleted === false && jobData.currentOrder.type === "monthly") {
+              console.log("HÓA ĐƠN")
+              let userData = await userModel.findOne({ _id: jobData.user }).lean().exec();
+              let data;
+              if (userData && jobData.room) {
+                data = {
+                  userName: userData.lastName + " " + userData.firstName,
+                  userPhone: userData.phoneNumber.countryCode + " " + userData.phoneNumber.number,
+                  roomName: jobData.room.name,
+                  ...jobData.currentOrder,
+                };
+              } else if (userData) {
+                data = {
+                  userName: userData.lastName + " " + userData.firstName,
+                  userPhone: userData.phoneNumber.countryCode + " " + userData.phoneNumber.number,
+                  roomName: null,
+                  ...jobData.currentOrder,
+                };
+              } else if (jobData.room) {
+                data = {
+                  userName: null,
+                  userPhone: null,
+                  roomName: jobData.room.name,
+                  ...jobData.currentOrder,
+                };
+              } else {
+                data = {
+                  userName: null,
+                  userPhone: null,
+                  roomName: null,
+                  ...jobData.currentOrder,
+                };
+              }
+              listOrderPendingPay.push(data);
             }
-            listOrderPendingPay.push(data);
           }
         }
       }
@@ -1662,11 +1670,18 @@ export default class TransactionsController {
             unitPrice: roomData.waterPrice.toFixed(2),
             total: orderData.waterPrice.toFixed(2),
           });
-          const wifi = await OptionsTypeModel.create({
+          const vehicle = await OptionsTypeModel.create({
             expense: "Chi Phí Xe",
             type: roomData.vihicle.toString(),
             unitPrice: roomData.wifiPrice.toFixed(2),
             total: orderData.vehiclePrice.toFixed(2),
+          });
+
+          const wifi = await OptionsTypeModel.create({
+            expense: "Chi Phí Wifi",
+            type: roomData.person.toString(),
+            unitPrice: roomData.wifiPriceN.toFixed(2),
+            total: orderData.wifiPrice.toFixed(2),
           });
 
           const other = await OptionsTypeModel.create({
@@ -1727,6 +1742,7 @@ export default class TransactionsController {
             garbage: garbage,
             water: water,
             wifi: wifi,
+            vehicle: vehicle,
             other: other,
             room: room,
 
@@ -1850,6 +1866,44 @@ export default class TransactionsController {
 
               type: "deposit",
             });
+
+            const activeExpireTime = moment(jobData.checkInTime).add(7, "days").endOf("days").format("DD/MM/YYYY");
+
+            await NotificationController.createNotification({
+              title: "Thông báo kích hoạt hợp đồng",
+              content: `Vui lòng kích hoạt hợp đồng, hạn cuối tới ngày ${activeExpireTime}.`,
+              user: resData.user,
+              isRead: false,
+            });
+
+            const userDataRes = await userModel.findOne({_id: resData.user}).lean().exec();
+            if(userDataRes) {
+              if(userDataRes.email) {
+                const transporter = nodemailer.createTransport({
+                  service: 'gmail',
+                  auth: {
+                    user: 'cr7ronadol12345@gmail.com',
+                    pass: 'wley oiaw yhpl oupy'
+                  }
+                });    
+    
+                const mailOptions = {
+                  from: 'cr7ronadol12345@gmail.com',
+                  // to: 'quyetthangmarvel@gmail.com',
+                  to: userDataRes.email,  // thay bằng mail admin
+                  subject: `THÔNG BÁO KÍCH HOẠT HỢP ĐỒNG`,
+                  text: `Vui lòng kích hoạt hợp đồng, hạn cuối: ${activeExpireTime}.`,
+                };
+    
+                transporter.sendMail(mailOptions, function (error, info) {
+                  if (error) {
+                    console.error(error);
+                  } else {
+                    // console.log('Email đã được gửi: ' + info.response);
+                  }
+                });
+              }
+            }
 
           }
         }

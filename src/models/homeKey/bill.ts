@@ -97,6 +97,9 @@ export class Bill extends Basic {
   wifi?: Ref<OptionsType>;
 
   @prop({ ref: OptionsType })
+  vehicle?: Ref<OptionsType>;
+
+  @prop({ ref: OptionsType })
   other?: Ref<OptionsType>;
 
   @prop({ ref: OptionsType })
