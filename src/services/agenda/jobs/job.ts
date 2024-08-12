@@ -94,9 +94,9 @@ export default (agenda) => {
       const startTime : moment.Moment = moment().subtract(1, 'months').startOf("months");
       const start = startTime.format("YYYY-MM-DD"); // đầu tháng trước
       const endTime: moment.Moment = moment().subtract(1, 'months').endOf("months");// cuối tháng trước
-      const end = endTime.format("YYYY-MM-DD");// cuối tháng trước
+      const end = endTime.clone().format("YYYY-MM-DD");// cuối tháng trước
 
-      const expireTime = endTime.add(15, "days"); // note: để tạm 15 ngày, cần tính lại tất cả, cần set lại cuối ngày
+      const expireTime = endTime.clone().add(15, "days"); // note: để tạm 15 ngày, cần tính lại tất cả, cần set lại cuối ngày
 
       // let electricNumber = await EnergyController.countElectricV2(job.attrs.data.jobId, start, end);
       const roomId = resData.room;
@@ -173,23 +173,11 @@ export default (agenda) => {
             "CheckOrderStatusTemp",
             { orderId: orderData._id }
           );
-
-          // await global.agendaInstance.agenda.schedule(
-          //   moment()
-          //     .endOf("month")
-          //     .toDate(),
-          //   "CheckOrderStatus",
-          //   { orderId: orderData._id }
-          // );
-          // await global.agendaInstance.agenda.schedule(
-          //   moment()
-          //     .startOf("month")
-          //     .add(1, "months")
-          //     .toDate(),
-          //   "CreateOrder",
-          //   { jobId: resData._id }
-          // );
+          console.log("Tạo order thành côngggg");
+          done();
         } else {
+          console.log("Không tạo đượcccc")
+          done();
           // -----------------new
           //Xóa job tạm thời
           // await jobModel.findOneAndUpdate({ _id: resData._id }, {isDeleted: true})
@@ -197,6 +185,9 @@ export default (agenda) => {
           //                           .exec();
           //---------------------
         }
+      } else {
+        console.log("Không tìm thấy jobbbb")
+        done();
       }
       done();
     } catch (err) {
@@ -688,6 +679,7 @@ export default (agenda) => {
         // vào cuối tháng trước, trước khi task chạy thì đã hết hạn rồi)
 
         if (moment().year() < checkOutTime.year()) {
+          //CHECK
           //Nhắc nhở đóng tiền liên tục 15 ngày đầu
           await global.agendaInstance.agenda.schedule(
             moment().add("2", 'minutes').toDate(), //note: 5
@@ -699,6 +691,7 @@ export default (agenda) => {
 
         } else if (moment().year() === checkOutTime.year()) {
           if (moment().month() < checkOutTime.month()) {
+            //CHECKED
 
             //Nhắc nhở đóng tiền liên tục 15 ngày đầu
             await global.agendaInstance.agenda.schedule(
@@ -710,7 +703,8 @@ export default (agenda) => {
             done();
 
           } else if (moment().month() === checkOutTime.month()) {
-            if (checkOutTime.date() <= 2) {              
+            if (checkOutTime.date() <= 2) {       
+              //CHECKED       
               await global.agendaInstance.agenda.schedule(
                 moment().add("2", 'minutes').toDate(), //note: 5
                 "RemindUserMonthlyToExpirePlus2Day_Expire1Or2ThisMonth", 
@@ -720,18 +714,20 @@ export default (agenda) => {
               done();
 
             } else if (checkOutTime.date() <= 15) {
+              //CHECKED
               await global.agendaInstance.agenda.schedule(
                 moment().add("2", 'minutes').toDate(), //note: 5
-                "RemindUserMonthlyToExpireDay_ExpireThisMonth", //done
+                "RemindUserMonthlyToExpireDay_ExpireThisMonth",
                 { orderId: job.attrs.data.orderId }
               );
 
               done();
 
             } else {
+              //CHECKED
               await global.agendaInstance.agenda.schedule(
                 moment().add("2", 'minutes').toDate(),//note: 5
-                "RemindUserMonthlyToDay15_ExpireThisMonth", //done
+                "RemindUserMonthlyToDay15_ExpireThisMonth",
                 { orderId: job.attrs.data.orderId }
               );
 
@@ -739,6 +735,7 @@ export default (agenda) => {
 
             }
           } else {
+            //CHECKED
             //check in vào đầu tháng, sẽ hết hạn vào ngày cuối cùng của tháng
             await global.agendaInstance.agenda.schedule(
               moment().add("2", 'minutes').toDate(),//note: 5
@@ -750,7 +747,7 @@ export default (agenda) => {
 
           }
         } else {
-          //check in vào đầu tháng, sẽ hết hạn vào ngày cuối cùng của tháng\
+          //check in vào đầu tháng, sẽ hết hạn vào ngày cuối cùng của tháng
           //CHECKED
           await global.agendaInstance.agenda.schedule(
             moment().add("2", 'minutes').toDate(),//note: 5
@@ -1903,6 +1900,7 @@ export default (agenda) => {
                   "RemindUserMonthly15EveryDay_ExpireNextMonth",
                   { orderId: job.attrs.data.orderId }
                 );
+                done();
               }
             }
 
@@ -1916,6 +1914,7 @@ export default (agenda) => {
               "RemindUserMonthly15EveryDay_ExpireNextMonth",
               { orderId: job.attrs.data.orderId }
             );
+            done();
           } else {
             const payDeposit = await payDepositListModel.create({
               room: jobData.room,
@@ -2109,6 +2108,7 @@ export default (agenda) => {
   
               }
             }
+            done();
           }
         } else {
           // Đã thanh toán, cuối tháng tạo bill mới
@@ -2120,6 +2120,7 @@ export default (agenda) => {
             "CreateOrderForNextMonth",
             { jobId: jobId }
           );
+          done();
         }
       }
 
@@ -2536,6 +2537,7 @@ export default (agenda) => {
                   "RemindUserMonthlyToDay15_ExpireThisMonth",
                   { orderId: job.attrs.data.orderId }
                 );
+                done();
               }
             }
 
@@ -2547,6 +2549,7 @@ export default (agenda) => {
               "RemindUserMonthlyToDay15_ExpireThisMonth",
               { orderId: job.attrs.data.orderId }
             );
+            done();
           } else {
             const payDeposit = await payDepositListModel.create({
               room: jobData.room,
@@ -2742,6 +2745,7 @@ export default (agenda) => {
                 });
               }
             }
+            done();
           }
         } else {
           // Đã thanh toán, Tạo bill mới những ngày còn lại của tháng
@@ -2970,9 +2974,6 @@ export default (agenda) => {
             )
           }
 
-          
-          
-  
           if (moment().startOf("days").diff(checkOutDayPlus3.clone().startOf("days")) <= 0) {
             await global.agendaInstance.agenda.schedule(
               moment()
@@ -3119,7 +3120,6 @@ export default (agenda) => {
             }
           }
 
-          //new------------
         } else {
           const jobDataAfterUpdate = await jobModel.findOneAndUpdate(
             { orders: orderData._id },
@@ -3233,6 +3233,7 @@ export default (agenda) => {
 
         if (checkOutDay.year() > moment().year()) {
           //ĐÃ GIAN HẠN
+          console.log("PendingCheckDayExpireContract đã gia hạn 1")
           await global.agendaInstance.agenda.schedule(
             moment()
               .startOf("month")
@@ -3241,9 +3242,11 @@ export default (agenda) => {
             "CreateOrderForNextMonth",
             { jobId: jobId }
           );
+          done();
         } else if (checkOutDay.year() === moment().year()) {
           if (checkOutDay.month() > moment().month()) {
             // ĐÃ GIAN HẠN
+            console.log("PendingCheckDayExpireContract đã gia hạn 2")
             await global.agendaInstance.agenda.schedule(
               moment()
                 .startOf("month")
@@ -3252,14 +3255,17 @@ export default (agenda) => {
               "CreateOrderForNextMonth",
               { jobId: jobId }
             );
+            done();
           } else if (checkOutDay.month() === moment().month()) {
             //Hết thời gian gia hạn, hết hợp đồng
+            console.log("PendingCheckDayExpireContract không gia hạn")
             await global.agendaInstance.agenda.schedule(
               // moment().add("2", 'minutes').toDate(), //note: 5
               checkOutDay.endOf("days").toDate(),
               "CreateOrderForRestDayInMonBeforeExpireContract",
               { jobId: jobId }
             );
+            done();
           } 
         } 
       }
